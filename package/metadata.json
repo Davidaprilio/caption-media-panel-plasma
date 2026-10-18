@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "david@deptechdigital.com",
+                "Name": "David"
+            }
+        ],
+        "Category": "Multimedia",
+        "Description": "Shows captions / transcript of the media that is currently playing",
+        "Icon": "media-view-subtitles-symbolic",
+        "Id": "com.deptechdigital.captionpanel",
+        "License": "GPL-2.0-or-later",
+        "Name": "Caption Media Panel",
+        "Version": "0.1.0"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
