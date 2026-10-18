@@ -45,7 +45,7 @@ MouseArea {
     // Marquee mode: space between the active and the next line, and the slot
     // the next line gets (longer text fades out).
     readonly property real marqueeGap: Kirigami.Units.gridUnit
-    readonly property real marqueeNextWidth: 200
+    readonly property real marqueeNextWidth: 100
 
     property real _longestLine: 0
 

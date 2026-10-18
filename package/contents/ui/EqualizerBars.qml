@@ -1,14 +1,17 @@
 import QtQuick
 import org.kde.kirigami as Kirigami
 
-// Decorative equalizer: bars bouncing to random heights while `running`,
-// settling down to a low rest level otherwise. It does not follow the real
-// audio (that would need audio capture inside plasmashell). Bars animate only
-// while running, and the popup only creates this while it is enabled.
+// Equalizer bars. With `levels` (live audio from AudioLevels) each bar
+// follows its band; without, the bars bounce to random heights while
+// `running` (decorative) and settle down to a low rest level otherwise.
+// Bars animate only while one of those applies, and the popup only creates
+// this while it is enabled.
 Item {
     id: equalizer
 
     property bool running: false
+    // One level per bar, 0..1, or null for the decorative mode.
+    property var levels: null
     property int barCount: 20
     property color color: Kirigami.Theme.highlightColor
     property real spacing: 2
@@ -26,7 +29,11 @@ Item {
             property real level: equalizer.restLevel
 
             // Next target: a random height while running, the rest level otherwise.
+            // With live levels, the next frame of audio sets the target instead.
             function step() {
+                if (equalizer.levels) {
+                    return;
+                }
                 if (equalizer.running) {
                     bounce.to = 0.2 + Math.random() * 0.8;
                     bounce.duration = 150 + Math.random() * 250;
@@ -62,6 +69,18 @@ Item {
                 target: equalizer
                 function onRunningChanged() {
                     bar.step();
+                }
+                function onLevelsChanged() {
+                    const levels = equalizer.levels;
+                    if (!levels) {
+                        // Audio stopped: back to the decorative mode or rest.
+                        bar.step();
+                        return;
+                    }
+                    // Eases towards the band's level over about one frame of audio.
+                    bounce.to = Math.max(equalizer.restLevel, levels[bar.index] || 0);
+                    bounce.duration = 50;
+                    bounce.restart();
                 }
             }
         }

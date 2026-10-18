@@ -16,11 +16,11 @@ Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - **Mode lyric**: baris bergeser naik seperti lirik di aplikasi musik. Jumlah baris 1–5 (default 1).
 - **Mode marquee**: satu baris bergaya ticker. Baris berikutnya selalu terlihat di sisi kanan baris aktif dengan warna
-  redup, dalam slot maksimal 200 px; teks yang lebih panjang memudar dengan gradasi. Saat waktunya tiba, baris itu
+  redup, dalam slot maksimal 100 px; teks yang lebih panjang memudar dengan gradasi. Saat waktunya tiba, baris itu
   bergeser ke kiri menggantikan baris aktif, bagian yang memudar ikut terbuka, dan lirik sesudahnya masuk dari kanan
   ke slot yang ditinggalkan. Baris yang terlalu panjang digulir
   dulu selama durasinya.
-- **Perataan teks**: kiri, tengah, atau kanan. Di mode marquee, yang diratakan adalah baris aktif ditambah slot 200 px,
+- **Perataan teks**: kiri, tengah, atau kanan. Di mode marquee, yang diratakan adalah baris aktif ditambah slot 100 px,
   sehingga posisi baris aktif tidak bergantung pada panjang baris berikutnya.
 - **Lebar auto** mengikuti baris terpanjang (lyric), atau baris terpanjang + slot baris berikutnya (marquee), dibatasi
   "Maximum automatic width".
@@ -28,7 +28,9 @@ Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **Lebar** auto (mengikuti baris terpanjang, dengan batas maksimum) atau manual (px).
 - **Popup** berisi thumbnail/album art, judul dan artis, tombol previous / play-pause / next, serta transcript lengkap:
   baris aktif di-highlight dan auto-scroll. Klik baris untuk seek player.
-- **Equalizer animasi** di belakang judul popup (dekoratif, bukan level audio sungguhan). Bisa dimatikan di pengaturan.
+- **Equalizer animasi** di belakang judul popup. Kalau [cava](https://github.com/karlstav/cava) terpasang
+  (`sudo pacman -S cava`), bar mengikuti suara yang keluar dari speaker; tanpa cava, bar bergerak dekoratif.
+  Keduanya bisa dimatikan di pengaturan.
 - Panel vertikal: widget tampil sebagai ikon, transcript dibaca lewat popup.
 - *Demo mode* (opsional): memutar transcript dummy dengan jam lokal kalau tidak ada player.
 

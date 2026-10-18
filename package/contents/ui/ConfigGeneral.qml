@@ -20,6 +20,7 @@ KCM.SimpleKCM {
     property alias cfg_dummyForOtherMedia: dummyForOtherMedia.checked
     property alias cfg_lrclibEnabled: lrclibEnabled.checked
     property alias cfg_popupEqualizer: popupEqualizer.checked
+    property alias cfg_equalizerFollowsAudio: equalizerFollowsAudio.checked
 
     Kirigami.FormLayout {
         QQC2.ComboBox {
@@ -136,6 +137,11 @@ KCM.SimpleKCM {
             id: popupEqualizer
             Kirigami.FormData.label: i18n("Popup:")
             text: i18n("Animated equalizer behind the title")
+        }
+        QQC2.CheckBox {
+            id: equalizerFollowsAudio
+            enabled: popupEqualizer.checked
+            text: i18n("Follow the audio output (runs cava while the popup is open)")
         }
 
         Item {

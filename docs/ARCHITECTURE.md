@@ -41,7 +41,8 @@ Target: KDE Plasma 6 (dites di Plasma 6.7.5, Qt 6.11, Wayland, CachyOS).
 | `code/dummyTranscript.js` | Teks dummy. |
 | `ui/LyricView.qml`, `ui/MarqueeView.qml` | Tampilan di panel. |
 | `ui/FullRepresentation.qml` | Popup transcript. Baru dibuat saat pertama kali dibuka. |
-| `ui/EqualizerBars.qml` | Equalizer dekoratif di belakang header popup (config `popupEqualizer`). |
+| `ui/EqualizerBars.qml` | Equalizer di belakang header popup (config `popupEqualizer`): mengikuti `levels` kalau ada, dekoratif kalau tidak. |
+| `ui/AudioLevels.qml`, `code/cava_bridge.py` | Level audio sungguhan dari cava (config `equalizerFollowsAudio`), lihat "Equalizer mengikuti audio". |
 
 ## Sinkronisasi waktu (CueClock)
 
@@ -129,12 +130,29 @@ Karena itu `MediaSource._choosePlayer()` memilih sendiri:
 3. Kalau tidak ada yang memutar, player sebelumnya dipertahankan selama masih ada (sticky). Dengan begitu,
    mem-pause Spotify tidak memindahkan widget ke tab browser.
 
+## Equalizer mengikuti audio
+
+```
+cava (PipeWire, 20 bar, 30 fps, ASCII) ─stdout─► cava_bridge.py ─WebSocket 127.0.0.1:47213─► AudioLevels.qml ─► EqualizerBars
+```
+
+- Penangkapan audio tidak boleh terjadi di dalam plasmashell, jadi cava dan bridge berjalan sebagai proses terpisah.
+  `AudioLevels` menyalakan bridge lewat engine `executable` saat popup dibuka dan menerima data lewat `QtWebSockets`.
+  Begitu koneksi ditutup (popup disembunyikan), bridge menghentikan cava dan keluar sendiri setelah 2 detik.
+- Bridge hanya memakai library standar, berupa satu loop `select()` dengan modul bawaan yang kecil. Kalau beberapa
+  frame menumpuk, hanya frame terbaru yang dikirim. Kalau cava tidak ada, bridge keluar dengan kode 2 dan widget
+  kembali ke mode dekoratif.
+- cava menangkap **semua** suara yang keluar dari speaker (monitor dari sink default), bukan hanya player yang diikuti.
+- Biaya terukur (Oktober 2026, `schedstat`, governor powersave): cava ~1,0% dan bridge ~0,5% dari satu core,
+  RAM ~15 MB + ~12 MB, dan itu hanya selama popup terbuka. Sebagai pembanding, prototipe Python+numpy butuh ~2,6% dan
+  ~35 MB. Versi pertama bridge yang memakai asyncio justru lebih boros daripada cava (1,4%, 25 MB).
+
 ## Lebar di panel
 
-- **Auto**: lebar baris terpanjang di transcript (mode lyric), atau baris terpanjang + jarak + slot 200 px untuk baris
+- **Auto**: lebar baris terpanjang di transcript (mode lyric), atau baris terpanjang + jarak + slot 100 px untuk baris
   berikutnya (mode marquee), dibatasi `maxAutoWidth`.
 
-Di mode marquee, baris berikutnya dipotong ke slot 200 px. Kalau teksnya lebih panjang, ujungnya memudar lewat mask
+Di mode marquee, baris berikutnya dipotong ke slot 100 px. Kalau teksnya lebih panjang, ujungnya memudar lewat mask
 `MultiEffect` (layer GPU kecil, hanya aktif saat teks memang terpotong; di renderer software teks cukup dipotong). Nilainya dihitung sekali
   per transcript dengan `TextMetrics`, hanya untuk teks unik. Akibatnya, pergantian baris tidak memicu relayout
   panel, sehingga applet lain tidak ikut bergeser.

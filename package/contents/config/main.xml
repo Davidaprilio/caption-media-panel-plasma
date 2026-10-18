@@ -46,6 +46,10 @@
         <entry name="popupEqualizer" type="Bool">
             <default>true</default>
         </entry>
+        <!-- the equalizer follows the audio output (needs cava) -->
+        <entry name="equalizerFollowsAudio" type="Bool">
+            <default>true</default>
+        </entry>
         <!-- synced lyrics from LRCLIB for Spotify and YouTube Music -->
         <entry name="lrclibEnabled" type="Bool">
             <default>true</default>

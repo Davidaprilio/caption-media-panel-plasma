@@ -31,8 +31,9 @@ Item {
     // Space between the active and the next line.
     property real gap: Kirigami.Units.gridUnit
     // Width of the waiting line's slot; longer text fades out at its end.
-    property real nextMaxWidth: 200
-    readonly property real fadeWidth: Kirigami.Units.gridUnit * 3
+    property real nextMaxWidth: 100
+    // At most 40% of the slot, so a narrow slot still shows some solid text.
+    readonly property real fadeWidth: Math.min(Kirigami.Units.gridUnit * 3, nextMaxWidth * 0.4)
     readonly property real mutedOpacity: 0.4
     readonly property int startPause: 800
     readonly property int endPause: 400
