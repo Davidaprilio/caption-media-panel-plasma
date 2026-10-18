@@ -1,10 +1,12 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.extras as PlasmaExtras
 import org.kde.kirigami as Kirigami
 import "../code/cues.js" as Cues
+import "../code/youtube.js" as YouTube
 import "providers"
 
 // Popup with the whole transcript. Plasma creates it on first open only.
@@ -19,41 +21,136 @@ PlasmaExtras.Representation {
     collapseMarginsHint: true
 
     header: PlasmaExtras.PlasmoidHeading {
-        RowLayout {
+        // A single child: the heading only sizes itself from its content when
+        // there is exactly one.
+        Item {
             anchors.fill: parent
-            spacing: Kirigami.Units.smallSpacing
+            implicitWidth: headerRow.implicitWidth
+            implicitHeight: headerRow.implicitHeight
 
-            Kirigami.Icon {
-                Layout.preferredWidth: Kirigami.Units.iconSizes.medium
-                Layout.preferredHeight: Kirigami.Units.iconSizes.medium
-                source: root.media.iconName
+            // Background of the right half; declared first, so the title, info
+            // and buttons are drawn on top of it.
+            Loader {
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                width: parent.width * 0.5
+                active: Plasmoid.configuration.popupEqualizer
+                sourceComponent: EqualizerBars {
+                    // Animates only while it can be seen and something plays.
+                    running: root.expanded && root.media.playing && Kirigami.Units.longDuration > 0
+                    opacity: 0.35
+                }
             }
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
+            RowLayout {
+                id: headerRow
+                anchors.fill: parent
+                spacing: Kirigami.Units.largeSpacing
 
-                Kirigami.Heading {
-                    Layout.fillWidth: true
-                    level: 4
-                    elide: Text.ElideRight
-                    text: root.media.hasPlayer ? (root.media.track || root.media.identity) : (root.demo ? i18n("Demo") : i18n("No media playing"))
+                // Album art or video thumbnail; the player's icon when there is none.
+                Item {
+                    id: thumbnail
+
+                    // Browsers' own MPRIS players send no artwork for YouTube; its
+                    // thumbnail can be built from the video id.
+                    readonly property string source: root.media.artUrl || YouTube.thumbnailUrl(root.media.url)
+
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 4
+                    Layout.preferredHeight: Kirigami.Units.gridUnit * 4
+                    Layout.alignment: Qt.AlignVCenter
+
+                    Kirigami.ShadowedImage {
+                        id: art
+                        anchors.fill: parent
+                        source: thumbnail.source
+                        visible: status === Image.Ready
+                        asynchronous: true
+                        fillMode: Image.PreserveAspectCrop
+                        // Decoded at display size, not at the artwork's full resolution.
+                        sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
+                        radius: Kirigami.Units.cornerRadius
+                        color: "transparent"
+                    }
+
+                    Kirigami.Icon {
+                        anchors.centerIn: parent
+                        width: Kirigami.Units.iconSizes.large
+                        height: width
+                        visible: !art.visible
+                        source: root.media.iconName
+                    }
                 }
-                PlasmaComponents3.Label {
+
+                ColumnLayout {
                     Layout.fillWidth: true
-                    elide: Text.ElideRight
-                    opacity: 0.7
-                    visible: text.length > 0
-                    text: {
-                        const parts = [];
-                        if (root.media.artist) {
-                            parts.push(root.media.artist);
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 0
+
+                    Kirigami.Heading {
+                        Layout.fillWidth: true
+                        level: 4
+                        elide: Text.ElideRight
+                        text: root.media.hasPlayer ? (root.media.track || root.media.identity) : (root.demo ? i18n("Demo") : i18n("No media playing"))
+                    }
+                    PlasmaComponents3.Label {
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                        opacity: 0.7
+                        visible: text.length > 0
+                        text: {
+                            const parts = [];
+                            if (root.media.artist) {
+                                parts.push(root.media.artist);
+                            }
+                            if (root.media.identity && root.media.track) {
+                                parts.push(root.media.identity);
+                            }
+                            parts.push(i18n("Source: %1", root.transcript.sourceName));
+                            return parts.join(" · ");
                         }
-                        if (root.media.identity && root.media.track) {
-                            parts.push(root.media.identity);
+                    }
+
+                    RowLayout {
+                        Layout.topMargin: Kirigami.Units.smallSpacing
+                        spacing: 0
+                        visible: root.media.hasPlayer
+
+                        PlasmaComponents3.ToolButton {
+                            icon.name: LayoutMirroring.enabled ? "media-skip-forward" : "media-skip-backward"
+                            text: i18n("Previous")
+                            display: PlasmaComponents3.AbstractButton.IconOnly
+                            enabled: root.media.canGoPrevious
+                            onClicked: root.media.previous()
+
+                            PlasmaComponents3.ToolTip.text: text
+                            PlasmaComponents3.ToolTip.visible: hovered
+                            PlasmaComponents3.ToolTip.delay: Kirigami.Units.toolTipDelay
                         }
-                        parts.push(i18n("Source: %1", root.transcript.sourceName));
-                        return parts.join(" · ");
+
+                        PlasmaComponents3.ToolButton {
+                            icon.name: root.media.playing ? "media-playback-pause" : "media-playback-start"
+                            text: root.media.playing ? i18n("Pause") : i18n("Play")
+                            display: PlasmaComponents3.AbstractButton.IconOnly
+                            enabled: root.media.canPlayPause
+                            onClicked: root.media.playPause()
+
+                            PlasmaComponents3.ToolTip.text: text
+                            PlasmaComponents3.ToolTip.visible: hovered
+                            PlasmaComponents3.ToolTip.delay: Kirigami.Units.toolTipDelay
+                        }
+
+                        PlasmaComponents3.ToolButton {
+                            icon.name: LayoutMirroring.enabled ? "media-skip-backward" : "media-skip-forward"
+                            text: i18n("Next")
+                            display: PlasmaComponents3.AbstractButton.IconOnly
+                            enabled: root.media.canGoNext
+                            onClicked: root.media.next()
+
+                            PlasmaComponents3.ToolTip.text: text
+                            PlasmaComponents3.ToolTip.visible: hovered
+                            PlasmaComponents3.ToolTip.delay: Kirigami.Units.toolTipDelay
+                        }
                     }
                 }
             }

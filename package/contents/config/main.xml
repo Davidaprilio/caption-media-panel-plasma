@@ -42,6 +42,10 @@
         <entry name="demoWhenIdle" type="Bool">
             <default>false</default>
         </entry>
+        <!-- decorative equalizer behind the popup header -->
+        <entry name="popupEqualizer" type="Bool">
+            <default>true</default>
+        </entry>
         <!-- synced lyrics from LRCLIB for Spotify and YouTube Music -->
         <entry name="lrclibEnabled" type="Bool">
             <default>true</default>

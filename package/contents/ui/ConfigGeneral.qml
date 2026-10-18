@@ -19,6 +19,7 @@ KCM.SimpleKCM {
     property alias cfg_demoWhenIdle: demoWhenIdle.checked
     property alias cfg_dummyForOtherMedia: dummyForOtherMedia.checked
     property alias cfg_lrclibEnabled: lrclibEnabled.checked
+    property alias cfg_popupEqualizer: popupEqualizer.checked
 
     Kirigami.FormLayout {
         QQC2.ComboBox {
@@ -125,6 +126,16 @@ KCM.SimpleKCM {
             QQC2.Label {
                 text: i18nc("pixels per second", "px/s")
             }
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
+        }
+
+        QQC2.CheckBox {
+            id: popupEqualizer
+            Kirigami.FormData.label: i18n("Popup:")
+            text: i18n("Animated equalizer behind the title")
         }
 
         Item {

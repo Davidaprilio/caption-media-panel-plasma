@@ -21,6 +21,12 @@ function videoIdFromUrl(url) {
     return match ? match[1] : "";
 }
 
+// 320x180 thumbnail of a YouTube page URL, "" for anything else.
+function thumbnailUrl(url) {
+    const id = videoIdFromUrl(url);
+    return id ? "https://i.ytimg.com/vi/" + id + "/mqdefault.jpg" : "";
+}
+
 function playerRequest(videoId, client) {
     return {
         context: { client: { clientName: client.clientName, clientVersion: client.clientVersion, hl: "en" } },

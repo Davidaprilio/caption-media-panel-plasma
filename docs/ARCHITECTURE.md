@@ -41,6 +41,7 @@ Target: KDE Plasma 6 (dites di Plasma 6.7.5, Qt 6.11, Wayland, CachyOS).
 | `code/dummyTranscript.js` | Teks dummy. |
 | `ui/LyricView.qml`, `ui/MarqueeView.qml` | Tampilan di panel. |
 | `ui/FullRepresentation.qml` | Popup transcript. Baru dibuat saat pertama kali dibuka. |
+| `ui/EqualizerBars.qml` | Equalizer dekoratif di belakang header popup (config `popupEqualizer`). |
 
 ## Sinkronisasi waktu (CueClock)
 
@@ -68,6 +69,10 @@ kmpris tidak meneruskan URL itu ke QML. Karena itu `MediaSource` menjalankan `bu
 - `kde:pid` PBI sama dengan `kdePid` atau `instancePid` player saat ini. Multiplexer kmpris kadang tetap memilih
   player bawaan browser, bukan proxy PBI, jadi kedua kemungkinan itu diterima.
 - Judul PBI ada di dalam judul player. Player bawaan Chromium menambahkan "(3) … - YouTube" pada judul.
+
+Dari metadata PBI yang sama, widget juga mengambil judul, artis, album, dan artwork, lalu memprioritaskannya di atas
+data player yang diikuti. Player bawaan browser mengirim data yang kurang lengkap, misalnya untuk YouTube Music judulnya
+"Lagu | YouTube Music" tanpa artis, sehingga LRCLIB tidak bisa mencari liriknya.
 
 **Pengambilan transkrip** dilakukan lewat QML `XMLHttpRequest` (async, tanpa dependency tambahan):
 1. `POST /youtubei/v1/player` dengan client InnerTube ANDROID (fallback ke IOS) untuk mendapat daftar caption track.
@@ -147,6 +152,8 @@ Ukuran font otomatis mengecil kalau `N baris × tinggi baris` lebih besar dari t
   sesudahnya, yang ikut masuk dari kanan sampai tepat di posisi slot. Setelah geseran selesai, teks ditukar dan strip
   dikembalikan ke posisi awal tanpa terlihat, jadi tidak ada model atau delegate tambahan.
   Animasi otomatis mati kalau animasi Plasma dimatikan (`Kirigami.Units.longDuration == 0`).
+- Equalizer popup hanya beranimasi saat popup terbuka dan media diputar. Setelah itu bar turun ke posisi diam dan
+  semua animasinya berhenti (diuji di `tests/tst_equalizer.qml`). Kalau dimatikan di setting, komponennya tidak dibuat.
 
 ## Menambah service transkrip
 

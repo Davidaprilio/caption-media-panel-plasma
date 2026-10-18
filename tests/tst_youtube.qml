@@ -26,6 +26,12 @@ TestCase {
         compare(YouTube.videoIdFromUrl(data.url), data.id);
     }
 
+    function test_thumbnailUrl() {
+        compare(YouTube.thumbnailUrl("https://music.youtube.com/watch?v=IpFX2vq8HKw&list=x"), "https://i.ytimg.com/vi/IpFX2vq8HKw/mqdefault.jpg");
+        compare(YouTube.thumbnailUrl("https://open.spotify.com/track/1"), "");
+        compare(YouTube.thumbnailUrl(""), "");
+    }
+
     function response(tracks) {
         return {
             playabilityStatus: { status: "OK" },

@@ -26,7 +26,9 @@ Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
   "Maximum automatic width".
 - Saat tidak ada media atau tidak ada teks, area widget di panel dibiarkan kosong.
 - **Lebar** auto (mengikuti baris terpanjang, dengan batas maksimum) atau manual (px).
-- **Popup** berisi transcript lengkap: baris aktif di-highlight dan auto-scroll. Klik baris untuk seek player.
+- **Popup** berisi thumbnail/album art, judul dan artis, tombol previous / play-pause / next, serta transcript lengkap:
+  baris aktif di-highlight dan auto-scroll. Klik baris untuk seek player.
+- **Equalizer animasi** di belakang judul popup (dekoratif, bukan level audio sungguhan). Bisa dimatikan di pengaturan.
 - Panel vertikal: widget tampil sebagai ikon, transcript dibaca lewat popup.
 - *Demo mode* (opsional): memutar transcript dummy dengan jam lokal kalau tidak ada player.
 
