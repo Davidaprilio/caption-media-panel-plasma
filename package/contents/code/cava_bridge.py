@@ -10,6 +10,12 @@ A single select() loop with plain sockets keeps the per-frame cost tiny
 (asyncio cost more CPU than cava itself), and only small built-in modules are
 imported (hashlib alone would pull in OpenSSL, ~4 MB). Standard library only.
 
+The bridge may be killed outright (plasmashell's process handling sends
+SIGKILL when the widget goes away), so nothing must depend on its cleanup:
+cava gets SIGTERM from the kernel when the bridge dies (setpriv --pdeathsig),
+the config file is removed as soon as cava has read it, and stale files of
+dead bridges are removed on start.
+
 Exit codes: 0 done, 2 cava not found, 3 port already served by another bridge.
 """
 import binascii
@@ -69,7 +75,7 @@ def handshake(request):
     return None
 
 
-def serve(server, cava_out):
+def serve(server, cava_out, on_first_output):
     # socket -> request bytes while the handshake is pending, None once open.
     clients = {}
     pending = b""
@@ -86,6 +92,9 @@ def serve(server, cava_out):
                 data = os.read(cava_out, 4096)
                 if not data:
                     return  # cava stopped
+                if on_first_output:
+                    on_first_output()
+                    on_first_output = None
                 *frames, pending = (pending + data).split(b"\n")
                 if not frames:
                     continue
@@ -149,6 +158,21 @@ def which(program):
     return None
 
 
+CONFIG_PREFIX = "captionpanel-cava-"
+
+
+def remove_stale_configs(directory):
+    """Config files left by bridges that were killed before cava read them."""
+    for name in os.listdir(directory):
+        pid = name[len(CONFIG_PREFIX):-len(".conf")]
+        if name.startswith(CONFIG_PREFIX) and name.endswith(".conf") and pid.isdigit() \
+                and not os.path.exists("/proc/" + pid):
+            try:
+                os.unlink(os.path.join(directory, name))
+            except OSError:
+                pass
+
+
 def main():
     port = option("port", 47213)
     cava = which(option("cava", "cava"))  # tests pass a fake cava
@@ -165,13 +189,27 @@ def main():
     server.listen(4)
     server.setblocking(False)
 
-    config_path = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "captionpanel-cava-%d.conf" % os.getpid())
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+    remove_stale_configs(runtime_dir)
+    config_path = os.path.join(runtime_dir, "%s%d.conf" % (CONFIG_PREFIX, os.getpid()))
     with os.fdopen(os.open(config_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as config:
         config.write(CAVA_CONFIG.format(bars=option("bars", 20), framerate=option("framerate", 30)))
+
+    def remove_config():
+        try:
+            os.unlink(config_path)
+        except FileNotFoundError:
+            pass
+
+    # cava dies with the bridge, even when the bridge is SIGKILLed.
+    argv = [cava, "-p", config_path]
+    setpriv = which("setpriv")
+    if setpriv:
+        argv = [setpriv, "--pdeathsig", "TERM"] + argv
     # posix_spawn instead of subprocess (~2 MB): cava's stdout into a pipe, stderr dropped.
     read_fd, write_fd = os.pipe()
     devnull = os.open(os.devnull, os.O_WRONLY)
-    pid = os.posix_spawn(cava, [cava, "-p", config_path], os.environ, file_actions=[
+    pid = os.posix_spawn(argv[0], argv, os.environ, file_actions=[
         (os.POSIX_SPAWN_DUP2, write_fd, 1),
         (os.POSIX_SPAWN_DUP2, devnull, 2),
         (os.POSIX_SPAWN_CLOSE, read_fd),
@@ -179,7 +217,8 @@ def main():
     os.close(write_fd)
     os.close(devnull)
     try:
-        serve(server, read_fd)
+        # Output means cava has read its config.
+        serve(server, read_fd, remove_config)
     finally:
         try:
             os.kill(pid, signal.SIGTERM)
@@ -187,7 +226,7 @@ def main():
             pass
         os.waitpid(pid, 0)
         os.close(read_fd)
-        os.unlink(config_path)
+        remove_config()
         server.close()
     return 0
 

@@ -44,7 +44,9 @@ TestCase {
 
         equalizer.running = false;
         // Every bar eases back to the rest level within its 400 ms, then stops.
-        tryVerify(() => bars(equalizer).every(bar => Math.abs(bar.level - equalizer.restLevel) < 0.001), 1500);
+        // A finished animation lands exactly on its target; "close to it" could
+        // still be mid-animation.
+        tryVerify(() => bars(equalizer).every(bar => bar.level === equalizer.restLevel), 1500);
         const settled = levels(equalizer);
         wait(300);
         compare(levels(equalizer), settled, "no animation keeps running after settling");

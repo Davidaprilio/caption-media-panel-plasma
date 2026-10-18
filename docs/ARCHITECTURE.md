@@ -133,8 +133,17 @@ Karena itu `MediaSource._choosePlayer()` memilih sendiri:
 ## Equalizer mengikuti audio
 
 ```
-cava (PipeWire, 20 bar, 30 fps, ASCII) ─stdout─► cava_bridge.py ─WebSocket 127.0.0.1:47213─► AudioLevels.qml ─► EqualizerBars
+cava (PipeWire, 20 bar, 30 fps, ASCII) ─stdout─► cava_bridge.py ─WebSocket 127.0.0.1:47213─► AudioLevels.qml (main.qml)
+                                                                                                 ├─► EqualizerBars di panel
+                                                                                                 └─► EqualizerBars di popup
 ```
+
+- Hanya ada **satu** `AudioLevels` (di `main.qml`, `root.audioLevels`), jadi cava dan FFT berjalan sekali walaupun
+  kedua equalizer tampil. Sumber ini aktif kalau equalizer panel tampil dan media sedang diputar, atau popup terbuka
+  dengan equalizer aktif.
+- Equalizer panel memasang level langsung tanpa animasi perantara (`animateLevels: false`), jadi panel digambar ulang
+  sekitar 30 kali per detik saja. Equalizer popup memakai animasi singkat supaya lebih halus. Equalizer panel tidak
+  tampil di panel vertikal.
 
 - Penangkapan audio tidak boleh terjadi di dalam plasmashell, jadi cava dan bridge berjalan sebagai proses terpisah.
   `AudioLevels` menyalakan bridge lewat engine `executable` saat popup dibuka dan menerima data lewat `QtWebSockets`.
@@ -142,6 +151,10 @@ cava (PipeWire, 20 bar, 30 fps, ASCII) ─stdout─► cava_bridge.py ─WebSock
 - Bridge hanya memakai library standar, berupa satu loop `select()` dengan modul bawaan yang kecil. Kalau beberapa
   frame menumpuk, hanya frame terbaru yang dikirim. Kalau cava tidak ada, bridge keluar dengan kode 2 dan widget
   kembali ke mode dekoratif.
+- Bridge bisa dibunuh paksa: saat plasmashell di-restart atau logout, `QProcess` mengirim SIGKILL. Karena itu tidak
+  ada yang boleh bergantung pada proses pembersihan bridge. cava dijalankan lewat `setpriv --pdeathsig TERM`, sehingga
+  kernel mematikannya begitu bridge mati. File konfigurasi cava dihapus segera setelah cava mulai mengeluarkan data,
+  dan file basi milik bridge yang sudah mati dibersihkan setiap kali bridge start.
 - cava menangkap **semua** suara yang keluar dari speaker (monitor dari sink default), bukan hanya player yang diikuti.
 - Biaya terukur (Oktober 2026, `schedstat`, governor powersave): cava ~1,0% dan bridge ~0,5% dari satu core,
   RAM ~15 MB + ~12 MB, dan itu hanya selama popup terbuka. Sebagai pembanding, prototipe Python+numpy butuh ~2,6% dan

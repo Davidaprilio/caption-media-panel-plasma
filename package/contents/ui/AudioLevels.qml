@@ -59,7 +59,7 @@ Item {
             audio.levels = message.split(";").map(value => Math.min(1, Number(value) / 100));
         }
         onStatusChanged: {
-            if (status === WebSocket.Error || status === WebSocket.Closed) {
+            if (socket.status === WebSocket.Error || socket.status === WebSocket.Closed) {
                 audio.levels = null;
                 // The bridge may still be starting up, or just exited.
                 if (audio.active && audio.available && audio._attempts < 10) {

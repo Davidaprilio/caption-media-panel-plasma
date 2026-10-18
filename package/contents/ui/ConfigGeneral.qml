@@ -19,6 +19,7 @@ KCM.SimpleKCM {
     property alias cfg_demoWhenIdle: demoWhenIdle.checked
     property alias cfg_dummyForOtherMedia: dummyForOtherMedia.checked
     property alias cfg_lrclibEnabled: lrclibEnabled.checked
+    property alias cfg_panelEqualizer: panelEqualizer.checked
     property alias cfg_popupEqualizer: popupEqualizer.checked
     property alias cfg_equalizerFollowsAudio: equalizerFollowsAudio.checked
 
@@ -134,14 +135,18 @@ KCM.SimpleKCM {
         }
 
         QQC2.CheckBox {
+            id: panelEqualizer
+            Kirigami.FormData.label: i18n("Equalizer:")
+            text: i18n("Behind the caption in the panel")
+        }
+        QQC2.CheckBox {
             id: popupEqualizer
-            Kirigami.FormData.label: i18n("Popup:")
-            text: i18n("Animated equalizer behind the title")
+            text: i18n("Behind the title in the popup")
         }
         QQC2.CheckBox {
             id: equalizerFollowsAudio
-            enabled: popupEqualizer.checked
-            text: i18n("Follow the audio output (runs cava while the popup is open)")
+            enabled: panelEqualizer.checked || popupEqualizer.checked
+            text: i18n("Follow the audio output (runs cava while an equalizer is visible)")
         }
 
         Item {

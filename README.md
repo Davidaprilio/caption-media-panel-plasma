@@ -28,9 +28,9 @@ Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **Lebar** auto (mengikuti baris terpanjang, dengan batas maksimum) atau manual (px).
 - **Popup** berisi thumbnail/album art, judul dan artis, tombol previous / play-pause / next, serta transcript lengkap:
   baris aktif di-highlight dan auto-scroll. Klik baris untuk seek player.
-- **Equalizer animasi** di belakang judul popup. Kalau [cava](https://github.com/karlstav/cava) terpasang
-  (`sudo pacman -S cava`), bar mengikuti suara yang keluar dari speaker; tanpa cava, bar bergerak dekoratif.
-  Keduanya bisa dimatikan di pengaturan.
+- **Equalizer animasi** di belakang caption di panel dan di belakang judul popup (masing-masing bisa dimatikan). Kalau
+  [cava](https://github.com/karlstav/cava) terpasang (`sudo pacman -S cava`), bar mengikuti suara yang keluar dari
+  speaker; tanpa cava, bar bergerak dekoratif. Kedua equalizer memakai satu sumber audio yang sama.
 - Panel vertikal: widget tampil sebagai ikon, transcript dibaca lewat popup.
 - *Demo mode* (opsional): memutar transcript dummy dengan jam lokal kalau tidak ada player.
 

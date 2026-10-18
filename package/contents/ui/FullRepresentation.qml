@@ -36,21 +36,12 @@ PlasmaExtras.Representation {
                 anchors.right: parent.right
                 width: parent.width * 0.5
                 active: Plasmoid.configuration.popupEqualizer
-                sourceComponent: Item {
-                    EqualizerBars {
-                        anchors.fill: parent
-                        // Live audio when available, decorative otherwise.
-                        levels: audioLevels.levels
-                        // Animates only while it can be seen and something plays.
-                        running: root.expanded && root.media.playing && Kirigami.Units.longDuration > 0
-                        opacity: 0.35
-                    }
-
-                    // cava runs only while the popup is open.
-                    AudioLevels {
-                        id: audioLevels
-                        active: root.expanded && Plasmoid.configuration.equalizerFollowsAudio && Kirigami.Units.longDuration > 0
-                    }
+                sourceComponent: EqualizerBars {
+                    // Live audio (shared with the panel) when available, decorative otherwise.
+                    levels: root.audioLevels.levels
+                    // Animates only while it can be seen and something plays.
+                    running: root.popupEqualizerShown && root.clock.playing && root.animationsEnabled
+                    opacity: 0.35
                 }
             }
 

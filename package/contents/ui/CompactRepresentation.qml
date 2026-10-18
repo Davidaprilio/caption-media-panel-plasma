@@ -111,6 +111,39 @@ MouseArea {
         opacity: root.live ? 1 : 0.5
     }
 
+    // Behind the caption; declared first, so the text is drawn on top. A
+    // compact block (not the caption's width) on the side the text is aligned to.
+    Loader {
+        id: panelEqualizer
+
+        readonly property int bars: 20
+        readonly property real barWidth: Kirigami.Units.smallSpacing
+        readonly property real barSpacing: 2
+
+        width: Math.min(parent.width, bars * (barWidth + barSpacing))
+        height: parent.height
+        x: {
+            const free = parent.width - width;
+            if (compact.textAlignment === Text.AlignHCenter) {
+                return free / 2;
+            }
+            return compact.textAlignment === Text.AlignRight ? free : 0;
+        }
+        active: root.panelEqualizerShown
+        sourceComponent: EqualizerBars {
+            levels: root.audioLevels.levels
+            running: root.clock.playing && root.animationsEnabled
+            barCount: panelEqualizer.bars
+            maxBarWidth: panelEqualizer.barWidth
+            spacing: panelEqualizer.barSpacing
+            fadeFromLeft: false
+            // One render per audio frame instead of per display frame.
+            animateLevels: false
+            // Faint, so the caption on top stays readable.
+            opacity: 0.3
+        }
+    }
+
     Loader {
         id: viewLoader
         anchors.fill: parent

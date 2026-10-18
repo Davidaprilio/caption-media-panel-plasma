@@ -15,7 +15,15 @@ Item {
     property int barCount: 20
     property color color: Kirigami.Theme.highlightColor
     property real spacing: 2
-    readonly property real barWidth: Math.max(2, (width - spacing * (barCount - 1)) / barCount)
+    // Bars are spread evenly; a wide area gets thin bars instead of wide ones.
+    property real maxBarWidth: Infinity
+    // Fades the bars in from the left, for text drawn over the left side.
+    property bool fadeFromLeft: true
+    // Ease towards each live level (smoother, renders at the display's rate),
+    // or jump to it (renders only once per audio frame).
+    property bool animateLevels: true
+    readonly property real slotWidth: width / barCount
+    readonly property real barWidth: Math.max(2, Math.min(maxBarWidth, slotWidth - spacing))
     readonly property real restLevel: 0.12
 
     Repeater {
@@ -47,13 +55,13 @@ Item {
             }
 
             anchors.bottom: parent.bottom
-            x: index * (equalizer.barWidth + equalizer.spacing)
+            x: index * equalizer.slotWidth + (equalizer.slotWidth - equalizer.barWidth) / 2
             width: equalizer.barWidth
             height: Math.max(width, equalizer.height * level)
             radius: width / 2
             color: equalizer.color
             // Fades in from the left, so text drawn over it stays readable.
-            opacity: 0.15 + 0.85 * index / Math.max(1, equalizer.barCount - 1)
+            opacity: equalizer.fadeFromLeft ? 0.15 + 0.85 * index / Math.max(1, equalizer.barCount - 1) : 1
 
             Component.onCompleted: step()
 
@@ -77,8 +85,14 @@ Item {
                         bar.step();
                         return;
                     }
+                    const target = Math.max(equalizer.restLevel, levels[bar.index] || 0);
+                    if (!equalizer.animateLevels) {
+                        bounce.stop();
+                        bar.level = target;
+                        return;
+                    }
                     // Eases towards the band's level over about one frame of audio.
-                    bounce.to = Math.max(equalizer.restLevel, levels[bar.index] || 0);
+                    bounce.to = target;
                     bounce.duration = 50;
                     bounce.restart();
                 }

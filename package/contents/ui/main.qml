@@ -1,6 +1,7 @@
 import QtQuick
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
+import org.kde.kirigami as Kirigami
 import "providers"
 
 // Wiring: MediaSource (MPRIS) -> CueClock <- TranscriptSource (provider
@@ -11,10 +12,18 @@ PlasmoidItem {
     readonly property alias media: media
     readonly property alias transcript: transcript
     readonly property alias clock: clock
+    readonly property alias audioLevels: audioLevels
 
     // Demo mode plays the dummy transcript on a local clock when no player exists.
     readonly property bool demo: !media.hasPlayer && Plasmoid.configuration.demoWhenIdle
     readonly property bool live: media.hasPlayer || demo
+
+    // Equalizers: one behind the panel caption, one behind the popup title.
+    // Both read the same AudioLevels, so cava runs once for either or both.
+    readonly property bool animationsEnabled: Kirigami.Units.longDuration > 0
+    readonly property bool panelEqualizerShown: Plasmoid.configuration.panelEqualizer && live
+        && Plasmoid.formFactor !== PlasmaCore.Types.Vertical
+    readonly property bool popupEqualizerShown: Plasmoid.configuration.popupEqualizer && expanded
 
     function seekTo(ms) {
         if (demo) {
@@ -66,6 +75,14 @@ PlasmoidItem {
                 enabled: Plasmoid.configuration.dummyForOtherMedia || root.demo
             }
         ]
+    }
+
+    AudioLevels {
+        id: audioLevels
+        // The panel's equalizer only needs audio while something plays; the
+        // popup's while it is open.
+        active: Plasmoid.configuration.equalizerFollowsAudio && root.animationsEnabled
+            && ((root.panelEqualizerShown && clock.playing) || root.popupEqualizerShown)
     }
 
     CueClock {

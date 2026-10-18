@@ -42,11 +42,15 @@
         <entry name="demoWhenIdle" type="Bool">
             <default>false</default>
         </entry>
-        <!-- decorative equalizer behind the popup header -->
+        <!-- equalizer behind the caption in the panel -->
+        <entry name="panelEqualizer" type="Bool">
+            <default>true</default>
+        </entry>
+        <!-- equalizer behind the popup header -->
         <entry name="popupEqualizer" type="Bool">
             <default>true</default>
         </entry>
-        <!-- the equalizer follows the audio output (needs cava) -->
+        <!-- the equalizers follow the audio output (needs cava) -->
         <entry name="equalizerFollowsAudio" type="Bool">
             <default>true</default>
         </entry>

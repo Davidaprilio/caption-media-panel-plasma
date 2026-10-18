@@ -118,15 +118,19 @@ Item {
             _startScroll();
         }
     }
-    onWidthChanged: Qt.callLater(_relayout)
-    onHorizontalAlignmentChanged: Qt.callLater(_relayout)
-    onTextFontChanged: Qt.callLater(_relayout)
-    onNextMaxWidthChanged: Qt.callLater(_relayout)
+    onWidthChanged: relayout.restart()
+    onHorizontalAlignmentChanged: relayout.restart()
+    onTextFontChanged: relayout.restart()
+    onNextMaxWidthChanged: relayout.restart()
     Component.onCompleted: _show(index)
 
-    // Size, alignment or font changed: recompute positions for the current cue.
-    function _relayout() {
-        _show(index);
+    // Size, alignment or font changed: recompute positions for the current cue,
+    // once per event loop pass. A child Timer rather than Qt.callLater: it dies
+    // with this view, while a queued callLater would still run on a destroyed one.
+    Timer {
+        id: relayout
+        interval: 0
+        onTriggered: marquee._show(marquee.index)
     }
 
     Item {
