@@ -6,6 +6,7 @@ Widget KDE Plasma 6 untuk panel yang menampilkan caption/transcript dari media y
 **Status:**
 - **YouTube** di browser memakai transkrip asli dari YouTube (caption manual atau auto-generated).
   Syaratnya: [Plasma Browser Integration](https://community.kde.org/Plasma/Browser_Integration) beserta ekstensi browser-nya terpasang.
+- **Spotify** (aplikasi desktop maupun Spotify Web) memakai lirik tersinkron dari [LRCLIB](https://lrclib.net).
 - **Media lain** masih memakai transcript **dummy** yang mengikuti posisi player. Ini bisa dimatikan di pengaturan.
 
 Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -40,6 +41,10 @@ QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests
 
 # fake player MPRIS untuk mencoba widget tanpa media sungguhan
 tests/fake_mpris_player.py --length 600 --script "10:pause,13:play,16:seek=120,25:quit"
+
+# berpura-pura menjadi Spotify (lirik dari LRCLIB)
+tests/fake_mpris_player.py --identity Spotify --desktop-entry spotify \
+    --title blue --artist "yung kai" --album blue --length 214
 ```
 
 `fake_mpris_player.py` memakai Python sistem (`/usr/bin/python3`), karena butuh `python-dbus` dan `python-gobject`.

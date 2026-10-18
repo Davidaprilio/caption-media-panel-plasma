@@ -7,8 +7,49 @@ import org.kde.plasma.private.mpris as Mpris
 Item {
     id: source
 
-    readonly property var player: mpris.currentPlayer
+    // The player the widget follows. kmpris' multiplexer does not always
+    // follow a player that starts playing (its proxy only refreshes when the
+    // active row *number* changes) and may still point at a player that was
+    // filtered out, so the choice is made here; see _choosePlayer().
+    property var player: null
     readonly property bool hasPlayer: player !== null
+    // All real players (not the multiplexer row) known to the model.
+    property var _players: []
+    // Changes whenever any player starts or stops playing.
+    readonly property string _playingState: {
+        const preferred = mpris.currentPlayer;
+        const states = _players.map(p => p.playbackStatus);
+        return (preferred ? preferred.playbackStatus : -1) + "|" + states.join(",");
+    }
+
+    on_PlayingStateChanged: _choosePlayer()
+    // A followed player that quits turns into null.
+    onPlayerChanged: {
+        if (!player) {
+            Qt.callLater(_choosePlayer);
+        }
+    }
+
+    // Keeps the followed player while it plays; otherwise switches to one that
+    // plays (the multiplexer's choice first); with nothing playing, keeps the
+    // previous one as long as it exists (like Plasma's own media controller).
+    function _choosePlayer() {
+        const preferred = mpris.currentPlayer;
+        const isPlaying = p => p && p.playbackStatus === Mpris.PlaybackStatus.Playing;
+        const exists = p => p && (p === preferred || _players.indexOf(p) !== -1);
+        let next = player;
+        if (!isPlaying(player)) {
+            if (isPlaying(preferred)) {
+                next = preferred;
+            } else {
+                const playingOne = _players.find(isPlaying);
+                next = playingOne || (exists(player) ? player : preferred);
+            }
+        }
+        if (next !== player) {
+            player = next;
+        }
+    }
 
     readonly property bool playing: hasPlayer && player.playbackStatus === Mpris.PlaybackStatus.Playing
     readonly property real rate: hasPlayer && player.rate > 0 ? player.rate : 1
@@ -17,9 +58,12 @@ Item {
 
     readonly property string track: hasPlayer ? player.track : ""
     readonly property string artist: hasPlayer ? player.artist : ""
+    readonly property string album: hasPlayer ? player.album : ""
+    readonly property string desktopEntry: hasPlayer ? player.desktopEntry : ""
     readonly property string identity: hasPlayer ? player.identity : ""
     readonly property string iconName: hasPlayer && player.iconName ? player.iconName : "media-view-subtitles-symbolic"
-    readonly property string trackKey: hasPlayer ? identity + "\u001f" + track + "\u001f" + artist : ""
+    // Read from player directly, so a player switch changes it once.
+    readonly property string trackKey: hasPlayer ? player.identity + "\u001f" + player.track + "\u001f" + player.artist : ""
 
     // Page URL of the current browser media ("" if unknown). kmpris keeps
     // xesam:url to itself, so it is read straight from the Plasma Browser
@@ -108,6 +152,32 @@ Item {
 
     Mpris.Mpris2Model {
         id: mpris
+        onCurrentPlayerChanged: source._choosePlayer()
+    }
+
+    component PlayerRow: QtObject {
+        required property var container
+        required property bool isMultiplexer
+    }
+
+    Instantiator {
+        id: playerRows
+        model: mpris
+        delegate: PlayerRow {}
+        // Collected later: a removed row is still listed while the signal runs.
+        onObjectAdded: Qt.callLater(source._collectPlayers)
+        onObjectRemoved: Qt.callLater(source._collectPlayers)
+    }
+
+    function _collectPlayers() {
+        const players = [];
+        for (let i = 0; i < playerRows.count; ++i) {
+            const row = playerRows.objectAt(i) as PlayerRow;
+            if (row && !row.isMultiplexer && row.container) {
+                players.push(row.container);
+            }
+        }
+        _players = players;
     }
 
     P5Support.DataSource {

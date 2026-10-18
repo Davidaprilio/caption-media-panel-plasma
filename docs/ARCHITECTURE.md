@@ -16,6 +16,7 @@ Target: KDE Plasma 6 (dites di Plasma 6.7.5, Qt 6.11, Wayland, CachyOS).
  MPRIS (D-Bus) ──► MediaSource.qml ──► CueClock.qml ◄── TranscriptSource.qml (router)
                    playing, rate,      posisi interpolasi,   providers: [ (urutan = prioritas)
                    position, track,    currentIndex, active    YouTubeProvider  (URL YouTube)
+                                                               LrclibProvider   (Spotify → lirik)
                                                                DummyProvider    (fallback) ]
                                                              semua mengimplementasikan TranscriptProvider
                    url (via busctl)                          cues[] {start,end,text}
@@ -28,12 +29,13 @@ Target: KDE Plasma 6 (dites di Plasma 6.7.5, Qt 6.11, Wayland, CachyOS).
 
 | File | Peran |
 |---|---|
-| `ui/MediaSource.qml` | Adapter **satu-satunya** ke `org.kde.plasma.private.mpris` (API private Plasma). Kalau API itu berubah, cukup file ini yang diubah. |
+| `ui/MediaSource.qml` | Adapter **satu-satunya** ke `org.kde.plasma.private.mpris` (API private Plasma). Kalau API itu berubah, cukup file ini yang diubah. Player yang diikuti dipilih sendiri (lihat "Pemilihan player"). |
 | `ui/CueClock.qml` | Menentukan cue yang sedang tampil berdasarkan posisi player. |
 | `ui/TranscriptSource.qml` | Router generik: memilih provider untuk media saat ini, lalu meneruskan output-nya. Daftar provider diisi di `main.qml`. |
 | `ui/providers/TranscriptProvider.qml` | **Interface** semua service transkrip (lihat "Menambah service transkrip"). |
-| `ui/providers/HttpClient.qml` | HTTP async bersama untuk provider: timeout, pembatalan, dan pengabaian jawaban basi. |
+| `ui/providers/HttpClient.qml` | HTTP async bersama untuk provider: header, timeout, retry untuk 503/429 (mengikuti `Retry-After`), pembatalan, dan pengabaian jawaban basi. |
 | `ui/providers/YouTubeProvider.qml`, `code/youtube.js` | Transkrip asli YouTube (lihat di bawah). |
+| `ui/providers/LrclibProvider.qml`, `code/lrclib.js` | Lirik tersinkron dari LRCLIB untuk Spotify (lihat di bawah). |
 | `ui/providers/DummyProvider.qml` | Provider fallback berisi teks dummy. |
 | `code/cues.js` | Binary search, batas cue berikutnya, dan helper. |
 | `code/dummyTranscript.js` | Teks dummy. |
@@ -82,6 +84,42 @@ Hasilnya di-cache di memori untuk 8 video terakhir.
 - Tanpa PBI (misalnya Firefox tanpa ekstensi), URL tidak tersedia dan video YouTube diperlakukan sebagai media lain.
 - Saat iklan YouTube diputar, posisi player adalah posisi iklan, sehingga caption tidak cocok selama iklan berjalan.
 
+## Lirik Spotify (LRCLIB)
+
+`LrclibProvider` aktif kalau `identity` atau `desktopEntry` player cocok dengan `players` (default `["spotify"]`),
+atau kalau URL halamannya diawali `https://open.spotify.com/` (Spotify Web lewat PBI). Syarat lainnya: judul dan artis tidak kosong,
+sehingga iklan Spotify jatuh ke fallback.
+
+Setiap lagu memakai paling banyak dua request (header `User-Agent: caption-media-panel/…`):
+1. `GET /api/get` dengan judul, artis, album, dan durasi (toleransi ±2 detik).
+2. Kalau tidak ada hasil tersinkron, `GET /api/search` dengan judul yang dibersihkan (tanpa "- Remastered…" dan
+   "(feat. …)") serta artis pertama. Hasil dipilih berdasarkan durasi terdekat (maksimal ±3 detik), supaya tidak
+   tertukar dengan versi live atau edit.
+
+Catatan dari pengujian (Oktober 2026):
+- Untuk lagu yang entrinya tidak persis ada, `/api/get` sering dijawab **503** (server mencari ke sumber luar,
+  lalu antreannya penuh). Karena itu 503 di langkah 1 langsung dilanjutkan ke search tanpa menunggu. Search diulang
+  sampai 2 kali kalau mendapat 503/429.
+- `/api/get-cached` menjawab 404 bahkan untuk lagu yang ada, jadi tidak dipakai.
+- Hasil "tidak ditemukan" di-cache, tetapi request yang gagal tidak, sehingga lagu itu dicoba lagi saat diputar ulang.
+- kmpris mengubah metadata satu per satu: judul berubah lebih dulu, baru durasi. Pencarian ditunda dengan
+  `Qt.callLater` supaya memakai durasi lagu yang benar.
+
+LRC yang didukung: beberapa timestamp dalam satu baris, `[offset:±ms]`, tag word-timing `<mm:ss.xx>` (diabaikan),
+baris kosong sebagai jeda, dan lagu instrumental (satu cue "♪ Instrumental ♪").
+
+## Pemilihan player
+
+`Mpris2Model.currentPlayer` (multiplexer kmpris) tidak selalu bisa diandalkan:
+- Kadang tetap menunjuk player bawaan browser yang sudah disaring dan digantikan oleh proxy PBI.
+- Tidak berpindah ke player yang baru mulai memutar kalau nomor baris player aktif kebetulan sama.
+
+Karena itu `MediaSource._choosePlayer()` memilih sendiri:
+1. Player yang sedang diikuti dipertahankan selama masih memutar.
+2. Kalau tidak, dipilih player yang sedang memutar, dengan pilihan multiplexer diutamakan.
+3. Kalau tidak ada yang memutar, player sebelumnya dipertahankan selama masih ada (sticky). Dengan begitu,
+   mem-pause Spotify tidak memindahkan widget ke tab browser.
+
 ## Lebar di panel
 
 - **Auto**: lebar baris terpanjang di transcript, dibatasi `maxAutoWidth`. Nilainya dihitung sekali
@@ -126,7 +164,7 @@ Langkah menambah service:
 Kandidat berikutnya:
 
 - File `.srt`/`.vtt`/`.lrc` di samping file media (dari `xesam:url`)
-- Layanan lirik (misalnya lrclib) untuk musik
+- LRCLIB untuk player musik lain (Elisa, YouTube Music, dan lain-lain): cukup tambahkan nama ke `players`/`urlPrefixes`
 - Video YouTube tanpa URL (tanpa PBI): cari video berdasarkan judul + durasi
 - Speech-to-text lokal (whisper.cpp) sebagai daemon terpisah, yang mengirim cue lewat D-Bus. Untuk ini
   mungkin perlu plugin C++ kecil, atau `Plasma5Support.DataSource` sebagai jembatan.

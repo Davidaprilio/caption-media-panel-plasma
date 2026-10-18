@@ -13,9 +13,13 @@ import QtQuick
 //         displayName: "LRCLIB"
 //         canHandle: media !== null && media.artist !== ""
 //         readonly property string _wanted: active ? media.trackKey : ""
-//         on_WantedChanged: _wanted ? fetch() : reset()
-//         function fetch() { setLoading(); ... setReady(cues) / setUnavailable(reason) }
+//         on_WantedChanged: Qt.callLater(load)
+//         function load() { if (!_wanted) { reset(); return } setLoading(); ... setReady(cues) / setUnavailable(reason) }
 //     }
+//
+// Metadata changes one field at a time (kmpris: the title changes before the
+// length), so read `media` from a Qt.callLater'd function, not right in the
+// change handler, and read current values there rather than passing them in.
 //
 // Then register it in TranscriptSource.providers. Heavy work (speech
 // recognition, big downloads) belongs in a separate process, not here.
@@ -43,7 +47,8 @@ QtObject {
     // --- Input, wired by TranscriptSource --------------------------------
 
     // The current media: a MediaSource, or anything with the same members
-    // (trackKey, track, artist, identity, lengthMs, url, urlPending).
+    // (trackKey, track, artist, album, identity, desktopEntry, lengthMs, url,
+    // urlPending).
     property var media: null
     // Preferred transcript languages, most wanted first (e.g. ["id", "en"]).
     property var languages: ["en"]

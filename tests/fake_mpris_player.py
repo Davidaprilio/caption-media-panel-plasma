@@ -6,6 +6,11 @@ actions, e.g.:
 
     tests/fake_mpris_player.py --length 600 --script "5:pause,7:play,9:seek=120,14:quit"
 
+Pretend to be Spotify (lyrics from LRCLIB):
+
+    tests/fake_mpris_player.py --identity Spotify --desktop-entry spotify \
+        --title blue --artist "yung kai" --album blue --length 214
+
 Actions: pause, play, seek=<seconds>, rate=<float>, track=<title>, quit.
 """
 import argparse
@@ -23,10 +28,14 @@ PATH = "/org/mpris/MediaPlayer2"
 
 
 class FakePlayer(dbus.service.Object):
-    def __init__(self, bus, length_s, title):
+    def __init__(self, bus, args):
         super().__init__(bus, PATH)
-        self.length_us = int(length_s * 1_000_000)
-        self.title = title
+        self.length_us = int(args.length * 1_000_000)
+        self.title = args.title
+        self.artist = args.artist
+        self.album = args.album
+        self.identity = args.identity
+        self.desktop_entry = args.desktop_entry
         self.track_no = 1
         self.status = "Playing"
         self.rate = 1.0
@@ -48,7 +57,8 @@ class FakePlayer(dbus.service.Object):
             "mpris:trackid": dbus.ObjectPath(f"/org/mpris/MediaPlayer2/track/{self.track_no}"),
             "mpris:length": dbus.Int64(self.length_us),
             "xesam:title": self.title,
-            "xesam:artist": dbus.Array(["Caption Test"], signature="s"),
+            "xesam:artist": dbus.Array(self.artist.split(", "), signature="s"),
+            "xesam:album": self.album,
         }, signature="sv")
 
     def player_props(self):
@@ -72,8 +82,8 @@ class FakePlayer(dbus.service.Object):
 
     def root_props(self):
         return {
-            "Identity": "Caption Test Player",
-            "DesktopEntry": "",
+            "Identity": self.identity,
+            "DesktopEntry": self.desktop_entry,
             "CanQuit": True,
             "CanRaise": False,
             "HasTrackList": False,
@@ -196,13 +206,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--length", type=float, default=600, help="track length in seconds")
     parser.add_argument("--title", default="Caption test track")
+    parser.add_argument("--artist", default="Caption Test", help='several artists: "A, B"')
+    parser.add_argument("--album", default="")
+    parser.add_argument("--identity", default="Caption Test Player")
+    parser.add_argument("--desktop-entry", default="")
     parser.add_argument("--script", default="", help="comma separated <seconds>:<action> list")
     args = parser.parse_args()
 
     DBusGMainLoop(set_as_default=True)
     bus = dbus.SessionBus()
     name = dbus.service.BusName(f"{ROOT_IFACE}.captiontest", bus)
-    player = FakePlayer(bus, args.length, args.title)
+    player = FakePlayer(bus, args)
     loop = GLib.MainLoop()
     started = time.monotonic()
 

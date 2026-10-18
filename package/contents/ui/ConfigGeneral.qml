@@ -17,6 +17,7 @@ KCM.SimpleKCM {
     property alias cfg_marqueeSpeed: marqueeSpeed.value
     property alias cfg_demoWhenIdle: demoWhenIdle.checked
     property alias cfg_dummyForOtherMedia: dummyForOtherMedia.checked
+    property alias cfg_lrclibEnabled: lrclibEnabled.checked
 
     Kirigami.FormLayout {
         QQC2.ComboBox {
@@ -117,6 +118,16 @@ KCM.SimpleKCM {
             QQC2.Label {
                 text: i18nc("pixels per second", "px/s")
             }
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
+        }
+
+        QQC2.CheckBox {
+            id: lrclibEnabled
+            Kirigami.FormData.label: i18n("Sources:")
+            text: i18n("Synced lyrics from LRCLIB for Spotify")
         }
 
         Item {

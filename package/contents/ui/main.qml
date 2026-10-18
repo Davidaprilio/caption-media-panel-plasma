@@ -59,6 +59,9 @@ PlasmoidItem {
         // TranscriptProvider (providers/) and list it here.
         providers: [
             YouTubeProvider {},
+            LrclibProvider {
+                enabled: Plasmoid.configuration.lrclibEnabled
+            },
             DummyProvider {
                 enabled: Plasmoid.configuration.dummyForOtherMedia || root.demo
             }
