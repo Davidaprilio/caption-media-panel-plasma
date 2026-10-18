@@ -7,6 +7,7 @@ Widget KDE Plasma 6 untuk panel yang menampilkan caption/transcript dari media y
 - **YouTube** di browser memakai transkrip asli dari YouTube (caption manual atau auto-generated).
   Syaratnya: [Plasma Browser Integration](https://community.kde.org/Plasma/Browser_Integration) beserta ekstensi browser-nya terpasang.
 - **Spotify** (aplikasi desktop maupun Spotify Web) memakai lirik tersinkron dari [LRCLIB](https://lrclib.net).
+- **YouTube Music** memakai caption YouTube kalau ada. Kalau tidak ada, widget otomatis beralih ke lirik LRCLIB.
 - **Media lain** masih memakai transcript **dummy** yang mengikuti posisi player. Ini bisa dimatikan di pengaturan.
 
 Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

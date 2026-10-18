@@ -44,7 +44,9 @@ TranscriptProvider {
             if (track) {
                 _fetchTrack(id, track);
             } else if (YouTube.isPlayable(response)) {
-                // The client works; the video simply has no captions.
+                // The client works; the video simply has no captions. Remembered,
+                // so the router can move on without asking again for this video.
+                remember(id, { cues: [], label: displayName });
                 setUnavailable("video " + id + " has no captions");
             } else {
                 _fetchPlayer(id, clientIndex + 1);

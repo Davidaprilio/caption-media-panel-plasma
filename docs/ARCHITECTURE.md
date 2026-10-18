@@ -84,11 +84,15 @@ Hasilnya di-cache di memori untuk 8 video terakhir.
 - Tanpa PBI (misalnya Firefox tanpa ekstensi), URL tidak tersedia dan video YouTube diperlakukan sebagai media lain.
 - Saat iklan YouTube diputar, posisi player adalah posisi iklan, sehingga caption tidak cocok selama iklan berjalan.
 
-## Lirik Spotify (LRCLIB)
+## Lirik Spotify dan YouTube Music (LRCLIB)
 
 `LrclibProvider` aktif kalau `identity` atau `desktopEntry` player cocok dengan `players` (default `["spotify"]`),
-atau kalau URL halamannya diawali `https://open.spotify.com/` (Spotify Web lewat PBI). Syarat lainnya: judul dan artis tidak kosong,
-sehingga iklan Spotify jatuh ke fallback.
+atau kalau URL halamannya diawali `https://open.spotify.com/` (Spotify Web lewat PBI) atau `https://music.youtube.com/`.
+Syarat lainnya: judul dan artis tidak kosong, sehingga iklan Spotify jatuh ke fallback.
+
+Untuk YouTube Music, `YouTubeProvider` ada di urutan lebih dulu, jadi caption YouTube dicoba dulu. Kalau videonya
+tidak punya caption (atau request gagal), router berjenjang ke LRCLIB. Video tanpa caption dicatat di cache
+YouTube, sehingga saat diputar ulang router langsung ke LRCLIB tanpa request ke YouTube.
 
 Setiap lagu memakai paling banyak dua request (header `User-Agent: caption-media-panel/…`):
 1. `GET /api/get` dengan judul, artis, album, dan durasi (toleransi ±2 detik).
@@ -158,9 +162,15 @@ Setiap service adalah turunan dari `providers/TranscriptProvider.qml`:
 
 Aturan router (`TranscriptSource`):
 1. Provider pertama (urut daftar) yang `enabled`, bukan `fallback`, dan `canHandle` akan dipakai.
-2. Kalau tidak ada, dipakai fallback pertama yang `enabled`. Selama URL media masih dicari
-   (`media.urlPending`), fallback ditahan dulu supaya tidak sempat muncul sekejap.
-3. Hanya provider yang `active` boleh bekerja (request jaringan, proses). Provider lain memanggil `reset()`.
+2. **Berjenjang:** kalau provider itu berakhir `Unavailable` untuk media ini, provider non-fallback berikutnya yang
+   juga `canHandle` dicoba (contoh: YouTube Music, caption YouTube lalu LRCLIB). Kalau semuanya habis, router tetap di
+   provider terakhir (Unavailable, panel kosong). Fallback tidak pernah menggantikan media yang sudah diklaim provider
+   asli. Daftar "sudah dicoba" di-reset setiap kali `trackKey` atau `url` berubah.
+3. Kalau tidak ada provider non-fallback yang `canHandle`, dipakai fallback pertama yang `enabled`. Selama URL media
+   masih dicari (`media.urlPending`), fallback ditahan dulu supaya tidak sempat muncul sekejap.
+4. Hanya provider yang `active` boleh bekerja (request jaringan, proses). Provider lain memanggil `reset()`.
+5. Supaya jenjang tidak dicoba berulang tanpa perlu, provider sebaiknya meng-cache hasil "tidak ada" yang pasti
+   (bukan kegagalan jaringan). Contohnya `remember(key, { cues: [] })`, lalu `setReady([])` saat cache hit.
 
 Langkah menambah service:
 1. Buat `ui/providers/NamaProvider.qml`. Kerangka minimalnya ada di komentar atas `TranscriptProvider.qml`,

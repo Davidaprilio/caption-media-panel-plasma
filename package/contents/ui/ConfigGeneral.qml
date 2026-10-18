@@ -134,7 +134,7 @@ KCM.SimpleKCM {
         QQC2.CheckBox {
             id: lrclibEnabled
             Kirigami.FormData.label: i18n("Sources:")
-            text: i18n("Synced lyrics from LRCLIB for Spotify")
+            text: i18n("Synced lyrics from LRCLIB (Spotify, YouTube Music without captions)")
         }
 
         Item {

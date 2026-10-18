@@ -136,6 +136,10 @@ TestCase {
         verify(!p.canHandle);
         spotifyMedia.url = "https://open.spotify.com/track/abc";
         verify(p.canHandle, "Spotify web player");
+        spotifyMedia.url = "https://music.youtube.com/watch?v=IpFX2vq8HKw";
+        verify(p.canHandle, "YouTube Music");
+        spotifyMedia.url = "https://www.youtube.com/watch?v=IpFX2vq8HKw";
+        verify(!p.canHandle, "plain YouTube is left to YouTube captions");
         spotifyMedia.url = "";
         spotifyMedia.identity = "Spotify";
         spotifyMedia.artist = "";

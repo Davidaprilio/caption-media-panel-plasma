@@ -1,7 +1,9 @@
 import QtQuick
 import "../../code/lrclib.js" as Lrclib
 
-// Synced lyrics from LRCLIB for music players (Spotify by default).
+// Synced lyrics from LRCLIB for music players: Spotify, and YouTube Music
+// (listed after YouTubeProvider, so it is only asked when the video has no
+// captions).
 // At most two requests per track: an exact lookup (title, artist, album,
 // duration), then a search when that finds nothing synced. Misses are
 // cached too, so replaying a song without lyrics does not ask again.
@@ -14,7 +16,7 @@ TranscriptProvider {
     // Matched case-insensitively against the MPRIS identity and desktop entry.
     property var players: ["spotify"]
     // Browser media (via Plasma Browser Integration) from these pages.
-    property var urlPrefixes: ["https://open.spotify.com/"]
+    property var urlPrefixes: ["https://open.spotify.com/", "https://music.youtube.com/"]
 
     readonly property string _key: media ? media.artist + "\u001f" + media.track + "\u001f" + media.album : ""
     // The track to load: none while another provider is in use.

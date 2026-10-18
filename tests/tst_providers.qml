@@ -50,6 +50,62 @@ TestCase {
         Component.onCompleted: setReady([{ start: 0, end: 500, text: "dummy" }])
     }
 
+    // Claims "multi" URLs but has nothing for them; answers later, like a network request.
+    component EmptyProvider: TranscriptProvider {
+        providerId: "empty"
+        displayName: "Empty"
+        canHandle: media !== null && media.url.startsWith("https://multi.test/")
+        property int loads: 0
+        onActiveChanged: {
+            if (active) {
+                ++loads;
+                Qt.callLater(setUnavailable, "test: nothing here");
+            } else {
+                reset();
+            }
+        }
+    }
+
+    // Same, but answers at once, like a cached miss.
+    component CachedEmptyProvider: TranscriptProvider {
+        providerId: "cachedEmpty"
+        displayName: "Cached empty"
+        canHandle: media !== null && media.url.startsWith("https://multi.test/")
+        onActiveChanged: active ? setReady([]) : reset()
+    }
+
+    component SecondProvider: TranscriptProvider {
+        providerId: "second"
+        displayName: "Second"
+        canHandle: media !== null && media.url.startsWith("https://multi.test/")
+        onActiveChanged: active ? setReady([{ start: 0, end: 1000, text: "second" }]) : reset()
+    }
+
+    Component {
+        id: cascadeComponent
+        TranscriptSource {
+            media: fakeMedia
+            providers: [
+                EmptyProvider {},
+                CachedEmptyProvider {},
+                SecondProvider {},
+                Fallback {}
+            ]
+        }
+    }
+
+    Component {
+        id: allEmptyComponent
+        TranscriptSource {
+            media: fakeMedia
+            providers: [
+                EmptyProvider {},
+                CachedEmptyProvider {},
+                Fallback {}
+            ]
+        }
+    }
+
     Component {
         id: sourceComponent
         TranscriptSource {
@@ -63,6 +119,7 @@ TestCase {
     }
 
     function init() {
+        fakeMedia.trackKey = "t1";
         fakeMedia.artist = "";
         fakeMedia.url = "";
         fakeMedia.urlPending = false;
@@ -139,6 +196,42 @@ TestCase {
         compare(provider(source, "site").languages, ["id", "en"]);
         source.languages = ["en"];
         compare(provider(source, "lyrics").languages, ["en"]);
+    }
+
+    function test_cascadeToNextProvider() {
+        const source = createTemporaryObject(cascadeComponent, test);
+        fakeMedia.url = "https://multi.test/a";
+        compare(source.current.providerId, "empty");
+        // Async miss, then a synchronous (cached) miss, then a provider with cues.
+        tryCompare(source, "sourceName", "Second");
+        compare(source.current.providerId, "second");
+        compare(source.status, TranscriptProvider.Ready);
+        compare(source.cues[0].text, "second");
+        compare(provider(source, "empty").loads, 1);
+        verify(!provider(source, "empty").active);
+    }
+
+    function test_cascadeStartsOverForNewMedia() {
+        const source = createTemporaryObject(cascadeComponent, test);
+        fakeMedia.url = "https://multi.test/a";
+        tryCompare(source, "sourceName", "Second");
+        fakeMedia.trackKey = "t2";
+        compare(source.current.providerId, "empty", "first choice again for another track");
+        tryCompare(source, "sourceName", "Second");
+        compare(provider(source, "empty").loads, 2);
+    }
+
+    function test_cascadeNeverFallsBackToTheFallback() {
+        const source = createTemporaryObject(allEmptyComponent, test);
+        fakeMedia.url = "https://multi.test/a";
+        tryCompare(source, "status", TranscriptProvider.Unavailable);
+        wait(50);
+        compare(source.current.providerId, "cachedEmpty", "stays on the last provider that gave up");
+        compare(source.status, TranscriptProvider.Unavailable);
+        compare(source.cues.length, 0);
+        // Media nobody claims still gets the fallback.
+        fakeMedia.url = "";
+        compare(source.current.providerId, "fallback");
     }
 
     Component {
