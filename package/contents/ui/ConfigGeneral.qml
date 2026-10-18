@@ -16,6 +16,7 @@ KCM.SimpleKCM {
     property alias cfg_animationDuration: animationDuration.value
     property alias cfg_marqueeSpeed: marqueeSpeed.value
     property alias cfg_demoWhenIdle: demoWhenIdle.checked
+    property alias cfg_dummyForOtherMedia: dummyForOtherMedia.checked
 
     Kirigami.FormLayout {
         QQC2.ComboBox {
@@ -123,8 +124,12 @@ KCM.SimpleKCM {
         }
 
         QQC2.CheckBox {
-            id: demoWhenIdle
+            id: dummyForOtherMedia
             Kirigami.FormData.label: i18n("Testing:")
+            text: i18n("Show the dummy transcript for media without captions (non-YouTube)")
+        }
+        QQC2.CheckBox {
+            id: demoWhenIdle
             text: i18n("Play the dummy transcript when no player is running")
         }
     }

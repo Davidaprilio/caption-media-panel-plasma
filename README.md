@@ -3,8 +3,12 @@
 Widget KDE Plasma 6 untuk panel yang menampilkan caption/transcript dari media yang sedang diputar
 (semua player MPRIS: browser, Spotify, VLC, dan lain-lain).
 
-**Status:** fase 1. Transcript masih **dummy** yang mengikuti posisi player (play, pause, seek, rate).
-Sumber transcript asli akan menyusul. Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+**Status:**
+- **YouTube** di browser memakai transkrip asli dari YouTube (caption manual atau auto-generated).
+  Syaratnya: [Plasma Browser Integration](https://community.kde.org/Plasma/Browser_Integration) beserta ekstensi browser-nya terpasang.
+- **Media lain** masih memakai transcript **dummy** yang mengikuti posisi player. Ini bisa dimatikan di pengaturan.
+
+Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Fitur
 

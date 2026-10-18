@@ -5,6 +5,7 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.kirigami as Kirigami
 import "../code/cues.js" as Cues
+import "providers"
 
 // What lives in the panel. The width is computed once per transcript (auto)
 // or fixed (manual), so line changes never cause a panel relayout.
@@ -16,8 +17,13 @@ MouseArea {
     readonly property bool lyricMode: cfg.displayMode === 0
     readonly property int lines: lyricMode ? Math.max(1, Math.min(5, cfg.visibleLines)) : 1
     readonly property int animationDuration: Kirigami.Units.longDuration > 0 ? cfg.animationDuration : 0
-    readonly property bool showCaption: root.live && root.provider.cues.length > 0
-    readonly property string idleText: root.media.hasPlayer ? i18n("No transcript") : i18n("No media playing")
+    readonly property bool showCaption: root.live && root.transcript.cues.length > 0
+    readonly property string idleText: {
+        if (!root.media.hasPlayer) {
+            return i18n("No media playing");
+        }
+        return root.transcript.status === TranscriptProvider.Loading ? i18n("Loading transcript…") : i18n("No transcript");
+    }
 
     // Font: configured size (or theme default), shrunk until all lines fit the panel.
     readonly property font baseFont: {
@@ -63,7 +69,7 @@ MouseArea {
     onClicked: root.expanded = !root.expanded
 
     function measureLongestLine() {
-        const texts = Cues.uniqueTexts(root.provider.cues);
+        const texts = Cues.uniqueTexts(root.transcript.cues);
         let longest = 0;
         for (let i = 0; i < texts.length; ++i) {
             measure.text = texts[i];
@@ -75,7 +81,7 @@ MouseArea {
     }
 
     Connections {
-        target: root.provider
+        target: root.transcript
         function onCuesChanged() {
             compact.measureLongestLine();
         }
@@ -135,7 +141,7 @@ MouseArea {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width
                 height: Math.min(parent.height, compact.rowHeight * compact.lines)
-                cues: root.provider.cues
+                cues: root.transcript.cues
                 targetIndex: root.clock.currentIndex
                 active: root.clock.active
                 lines: compact.lines
@@ -150,7 +156,7 @@ MouseArea {
         id: marqueeComponent
         MarqueeView {
             // Before the first cue, show it dimmed, like the lyric view does.
-            readonly property var cue: root.clock.currentCue ?? root.provider.cues[0]
+            readonly property var cue: root.clock.currentCue ?? root.transcript.cues[0]
             text: cue ? cue.text : ""
             active: root.clock.active
             playing: root.clock.playing

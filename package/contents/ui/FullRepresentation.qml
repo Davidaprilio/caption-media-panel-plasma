@@ -5,6 +5,7 @@ import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.extras as PlasmaExtras
 import org.kde.kirigami as Kirigami
 import "../code/cues.js" as Cues
+import "providers"
 
 // Popup with the whole transcript. Plasma creates it on first open only.
 PlasmaExtras.Representation {
@@ -51,7 +52,7 @@ PlasmaExtras.Representation {
                         if (root.media.identity && root.media.track) {
                             parts.push(root.media.identity);
                         }
-                        parts.push(i18n("Source: %1", root.provider.sourceName));
+                        parts.push(i18n("Source: %1", root.transcript.sourceName));
                         return parts.join(" · ");
                     }
                 }
@@ -96,7 +97,7 @@ PlasmaExtras.Representation {
                 showIndex(root.clock.currentIndex, true);
             }
 
-            model: root.live ? root.provider.cues : []
+            model: root.live ? root.transcript.cues : []
             clip: true
             reuseItems: true
             highlightFollowsCurrentItem: false
@@ -193,7 +194,12 @@ PlasmaExtras.Representation {
                 width: parent.width - Kirigami.Units.gridUnit * 4
                 visible: transcript.count === 0
                 icon.name: "media-view-subtitles-symbolic"
-                text: root.live ? i18n("No transcript for this media") : i18n("Nothing is playing")
+                text: {
+                    if (!root.live) {
+                        return i18n("Nothing is playing");
+                    }
+                    return root.transcript.status === TranscriptProvider.Loading ? i18n("Loading transcript…") : i18n("No transcript for this media");
+                }
                 explanation: root.live ? "" : i18n("Start a media player to see its transcript here.")
             }
         }

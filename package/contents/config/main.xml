@@ -38,5 +38,9 @@
         <entry name="demoWhenIdle" type="Bool">
             <default>false</default>
         </entry>
+        <!-- dummy transcript for media without a real transcript source -->
+        <entry name="dummyForOtherMedia" type="Bool">
+            <default>true</default>
+        </entry>
     </group>
 </kcfg>

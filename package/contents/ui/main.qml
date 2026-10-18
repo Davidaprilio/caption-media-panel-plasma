@@ -1,14 +1,15 @@
 import QtQuick
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
+import "providers"
 
-// Wiring: MediaSource (MPRIS) -> CueClock <- transcript provider, and the
-// panel / popup views read from the clock and the provider.
+// Wiring: MediaSource (MPRIS) -> CueClock <- TranscriptSource (provider
+// registry), and the panel / popup views read from the clock and the transcript.
 PlasmoidItem {
     id: root
 
     readonly property alias media: media
-    readonly property alias provider: provider
+    readonly property alias transcript: transcript
     readonly property alias clock: clock
 
     // Demo mode plays the dummy transcript on a local clock when no player exists.
@@ -45,17 +46,28 @@ PlasmoidItem {
         id: media
     }
 
-    DummyProvider {
-        id: provider
-        trackKey: media.trackKey
-        title: media.track
-        artist: media.artist
-        lengthMs: media.lengthMs
+    TranscriptSource {
+        id: transcript
+        media: root.media
+        // System language first, English as the fallback.
+        languages: {
+            const system = Qt.locale().name.split("_")[0];
+            return system === "en" ? ["en"] : [system, "en"];
+        }
+
+        // Transcript services, in priority order. To add one, implement
+        // TranscriptProvider (providers/) and list it here.
+        providers: [
+            YouTubeProvider {},
+            DummyProvider {
+                enabled: Plasmoid.configuration.dummyForOtherMedia || root.demo
+            }
+        ]
     }
 
     CueClock {
         id: clock
-        cues: root.live ? provider.cues : []
+        cues: root.live ? transcript.cues : []
         playing: media.playing || root.demo
         rate: media.hasPlayer ? media.rate : 1
         onResyncRequested: media.requestPositionUpdate()
