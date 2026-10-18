@@ -16,7 +16,8 @@ Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **Mode lyric**: baris bergeser naik seperti lirik di aplikasi musik. Jumlah baris 1–5 (default 1).
 - **Mode marquee**: satu baris bergaya ticker. Baris berikutnya selalu terlihat di sisi kanan baris aktif dengan warna
   redup, dalam slot maksimal 200 px; teks yang lebih panjang memudar dengan gradasi. Saat waktunya tiba, baris itu
-  bergeser ke kiri menggantikan baris aktif, dan bagian yang memudar ikut terbuka. Baris yang terlalu panjang digulir
+  bergeser ke kiri menggantikan baris aktif, bagian yang memudar ikut terbuka, dan lirik sesudahnya masuk dari kanan
+  ke slot yang ditinggalkan. Baris yang terlalu panjang digulir
   dulu selama durasinya.
 - **Perataan teks**: kiri, tengah, atau kanan. Di mode marquee, yang diratakan adalah baris aktif ditambah slot 200 px,
   sehingga posisi baris aktif tidak bergantung pada panjang baris berikutnya.

@@ -6,12 +6,13 @@ import org.kde.kirigami as Kirigami
 // Ticker: the active line, with the next one waiting on its right in a muted
 // tone, so a singer sees what comes next. The waiting line gets a fixed slot
 // (nextMaxWidth); longer text fades out at the end of it. When the next cue
-// starts, the strip slides left until that line takes the active place, and
-// its faded tail is revealed on the way. Alignment applies to the active line
+// starts, the strip slides left until that line takes the active place, its
+// faded tail is revealed on the way, and the line after it rides in from the
+// right into the slot. Alignment applies to the active line
 // plus the slot, so the active line's position does not depend on the length
 // of the next one. An active line wider than the view scrolls within its cue
-// first. Only two labels exist, and nothing animates between those moments or
-// while paused.
+// first. Three labels at most (the third only during a slide), and nothing
+// animates between those moments or while paused.
 Item {
     id: marquee
 
@@ -68,7 +69,7 @@ Item {
         _sliding = false;
         _shown = i;
         current.text = _text(i);
-        next.text = _text(i + 1);
+        nextBox.text = _text(i + 1);
         strip.x = _anchorX(current.implicitWidth);
         _swapping = false;
         _startScroll();
@@ -79,13 +80,13 @@ Item {
             // A cue went by faster than the slide; land on it first.
             _show(_slidingTo);
         }
-        if (index === _shown + 1 && next.text && animationDuration > 0) {
+        if (index === _shown + 1 && nextBox.text && animationDuration > 0) {
             scroll.stop();
-            appear.stop();
             _slidingTo = index;
+            afterNextBox.text = _text(index + 1);
             _sliding = true;
             // Lands where _show() puts the strip after the swap.
-            slide.to = _anchorX(next.implicitWidth) - nextBox.x;
+            slide.to = _anchorX(nextBox.textWidth) - nextBox.x;
             slide.restart();
         } else if (index !== _shown) {
             _show(index);
@@ -149,26 +150,12 @@ Item {
 
         // The waiting line, cut to its slot. While sliding in, the slot grows
         // to the full text so the faded tail is revealed.
-        Item {
+        FadedLine {
             id: nextBox
 
-            readonly property real hidden: next.implicitWidth - width
-
             x: current.text ? current.implicitWidth + marquee.gap : 0
-            width: marquee._sliding ? next.implicitWidth : Math.min(next.implicitWidth, marquee.nextMaxWidth)
-            height: parent.height
-            clip: true
+            width: marquee._sliding ? textWidth : Math.min(textWidth, marquee.nextMaxWidth)
             opacity: marquee._sliding ? 1 : marquee.mutedOpacity
-
-            // The fade needs shaders; the software renderer just cuts the text.
-            layer.enabled: hidden > 0.5 && GraphicsInfo.api !== GraphicsInfo.Software
-            layer.effect: MultiEffect {
-                maskEnabled: true
-                maskSource: fadeMask
-                // Maps the mask's alpha linearly-ish onto the text.
-                maskThresholdMin: 0.5
-                maskSpreadAtMin: 1.0
-            }
 
             Behavior on width {
                 enabled: !marquee._swapping && marquee.animationDuration > 0
@@ -185,45 +172,83 @@ Item {
                     duration: marquee.animationDuration
                 }
             }
+        }
+
+        // The line after next, only during a slide: it rides in from the right
+        // and ends exactly where the waiting line's slot is after the swap.
+        FadedLine {
+            id: afterNextBox
+
+            x: nextBox.x + nextBox.textWidth + marquee.gap
+            width: Math.min(textWidth, marquee.nextMaxWidth)
+            visible: marquee._sliding && text !== ""
+            opacity: marquee.mutedOpacity
+        }
+    }
+
+    // A single line cut to its width; text beyond it fades out at the end.
+    component FadedLine: Item {
+        id: line
+
+        property string text: ""
+        readonly property real textWidth: label.implicitWidth
+        readonly property real hidden: textWidth - width
+
+        height: strip.height
+
+        Item {
+            id: box
+            anchors.fill: parent
+            clip: true
+
+            // The fade needs shaders; the software renderer just cuts the text.
+            layer.enabled: line.hidden > 0.5 && GraphicsInfo.api !== GraphicsInfo.Software
+            layer.effect: MultiEffect {
+                maskEnabled: true
+                maskSource: fadeMask
+                // Maps the mask's alpha linearly-ish onto the text.
+                maskThresholdMin: 0.5
+                maskSpreadAtMin: 1.0
+            }
 
             PlasmaComponents3.Label {
-                id: next
+                id: label
                 anchors.verticalCenter: parent.verticalCenter
+                text: line.text
                 font: marquee.textFont
                 maximumLineCount: 1
                 textFormat: Text.PlainText
             }
         }
-    }
 
-    // Alpha mask for nextBox: opaque, then fading out over the last part. The
-    // fade shrinks as the hidden part does, so a fully revealed line ends crisp.
-    Item {
-        id: fadeMask
-        width: nextBox.width
-        height: nextBox.height
-        visible: false
-        layer.enabled: nextBox.layer.enabled
-
-        Rectangle {
-            id: fadeGradient
-
-            readonly property real fade: Math.min(marquee.fadeWidth, Math.max(0, nextBox.hidden))
-
+        // Alpha mask: opaque, then fading out over the last part. The fade
+        // shrinks as the hidden part does, so a fully revealed line ends crisp.
+        Item {
+            id: fadeMask
             anchors.fill: parent
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop {
-                    position: 0
-                    color: "white"
-                }
-                GradientStop {
-                    position: Math.max(0, 1 - fadeGradient.fade / Math.max(1, fadeMask.width))
-                    color: "white"
-                }
-                GradientStop {
-                    position: 1
-                    color: "transparent"
+            visible: false
+            layer.enabled: box.layer.enabled
+
+            Rectangle {
+                id: fadeGradient
+
+                readonly property real fade: Math.min(marquee.fadeWidth, Math.max(0, line.hidden))
+
+                anchors.fill: parent
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop {
+                        position: 0
+                        color: "white"
+                    }
+                    GradientStop {
+                        position: Math.max(0, 1 - fadeGradient.fade / Math.max(1, line.width))
+                        color: "white"
+                    }
+                    GradientStop {
+                        position: 1
+                        color: "transparent"
+                    }
                 }
             }
         }
@@ -236,19 +261,7 @@ Item {
         duration: marquee.slideDuration
         easing.type: Easing.OutCubic
         // Not emitted when stopped early; _follow() lands on the cue then.
-        onFinished: {
-            marquee._show(marquee._slidingTo);
-            appear.restart();
-        }
-    }
-
-    // The new waiting line fades in instead of popping up after a slide.
-    OpacityAnimator {
-        id: appear
-        target: nextBox
-        from: 0
-        to: marquee.mutedOpacity
-        duration: marquee.animationDuration
+        onFinished: marquee._show(marquee._slidingTo)
     }
 
     SequentialAnimation {

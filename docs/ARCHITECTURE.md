@@ -139,8 +139,9 @@ Ukuran font otomatis mengecil kalau `N baris × tinggi baris` lebih besar dari t
 - Saat di-pause atau idle: tidak ada timer dan tidak ada animasi.
 - Animasi hanya berjalan sekitar 250 ms per pergantian baris (mode lyric), sekitar 375 ms saat strip marquee
   bergeser ke baris berikutnya, atau selama teks marquee yang terlalu panjang digulir.
-- Marquee hanya memakai dua label (baris aktif dan berikutnya). Setelah geseran selesai, teks keduanya ditukar dan
-  strip dikembalikan ke posisi awal tanpa terlihat, jadi tidak ada model atau delegate tambahan.
+- Marquee memakai dua label (baris aktif dan berikutnya), ditambah label ketiga yang hanya ada selama geseran: baris
+  sesudahnya, yang ikut masuk dari kanan sampai tepat di posisi slot. Setelah geseran selesai, teks ditukar dan strip
+  dikembalikan ke posisi awal tanpa terlihat, jadi tidak ada model atau delegate tambahan.
   Animasi otomatis mati kalau animasi Plasma dimatikan (`Kirigami.Units.longDuration == 0`).
 
 ## Menambah service transkrip
