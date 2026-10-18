@@ -8,6 +8,7 @@ KCM.SimpleKCM {
     id: page
 
     property alias cfg_displayMode: displayMode.currentIndex
+    property alias cfg_textAlignment: textAlignment.currentIndex
     property alias cfg_visibleLines: visibleLines.value
     property int cfg_widthMode
     property alias cfg_manualWidth: manualWidth.value
@@ -23,7 +24,13 @@ KCM.SimpleKCM {
         QQC2.ComboBox {
             id: displayMode
             Kirigami.FormData.label: i18n("Display mode:")
-            model: [i18n("Lyric (lines move up)"), i18n("Marquee (long lines scroll)")]
+            model: [i18n("Lyric (lines move up)"), i18n("Marquee (next line waits on the right)")]
+        }
+
+        QQC2.ComboBox {
+            id: textAlignment
+            Kirigami.FormData.label: i18n("Text alignment:")
+            model: [i18n("Left"), i18n("Center"), i18n("Right")]
         }
 
         QQC2.SpinBox {

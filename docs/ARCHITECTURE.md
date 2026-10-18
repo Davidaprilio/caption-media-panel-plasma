@@ -122,7 +122,11 @@ Karena itu `MediaSource._choosePlayer()` memilih sendiri:
 
 ## Lebar di panel
 
-- **Auto**: lebar baris terpanjang di transcript, dibatasi `maxAutoWidth`. Nilainya dihitung sekali
+- **Auto**: lebar baris terpanjang di transcript (mode lyric), atau baris terpanjang + jarak + slot 200 px untuk baris
+  berikutnya (mode marquee), dibatasi `maxAutoWidth`.
+
+Di mode marquee, baris berikutnya dipotong ke slot 200 px. Kalau teksnya lebih panjang, ujungnya memudar lewat mask
+`MultiEffect` (layer GPU kecil, hanya aktif saat teks memang terpotong; di renderer software teks cukup dipotong). Nilainya dihitung sekali
   per transcript dengan `TextMetrics`, hanya untuk teks unik. Akibatnya, pergantian baris tidak memicu relayout
   panel, sehingga applet lain tidak ikut bergeser.
 - **Manual**: lebar tetap dalam px.
@@ -133,7 +137,10 @@ Ukuran font otomatis mengecil kalau `N baris × tinggi baris` lebih besar dari t
 
 - Saat media diputar: 0 tick CPU dalam 20 detik (diukur di `plasmawindowed`, kurang dari 10 ms CPU).
 - Saat di-pause atau idle: tidak ada timer dan tidak ada animasi.
-- Animasi hanya berjalan sekitar 250 ms per pergantian baris (mode lyric), atau selama teks marquee overflow.
+- Animasi hanya berjalan sekitar 250 ms per pergantian baris (mode lyric), sekitar 375 ms saat strip marquee
+  bergeser ke baris berikutnya, atau selama teks marquee yang terlalu panjang digulir.
+- Marquee hanya memakai dua label (baris aktif dan berikutnya). Setelah geseran selesai, teks keduanya ditukar dan
+  strip dikembalikan ke posisi awal tanpa terlihat, jadi tidak ada model atau delegate tambahan.
   Animasi otomatis mati kalau animasi Plasma dimatikan (`Kirigami.Units.longDuration == 0`).
 
 ## Menambah service transkrip

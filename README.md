@@ -14,7 +14,15 @@ Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Fitur
 
 - **Mode lyric**: baris bergeser naik seperti lirik di aplikasi musik. Jumlah baris 1–5 (default 1).
-- **Mode marquee**: satu baris yang bergeser hanya kalau teks tidak muat.
+- **Mode marquee**: satu baris bergaya ticker. Baris berikutnya selalu terlihat di sisi kanan baris aktif dengan warna
+  redup, dalam slot maksimal 200 px; teks yang lebih panjang memudar dengan gradasi. Saat waktunya tiba, baris itu
+  bergeser ke kiri menggantikan baris aktif, dan bagian yang memudar ikut terbuka. Baris yang terlalu panjang digulir
+  dulu selama durasinya.
+- **Perataan teks**: kiri, tengah, atau kanan. Di mode marquee, yang diratakan adalah baris aktif ditambah slot 200 px,
+  sehingga posisi baris aktif tidak bergantung pada panjang baris berikutnya.
+- **Lebar auto** mengikuti baris terpanjang (lyric), atau baris terpanjang + slot baris berikutnya (marquee), dibatasi
+  "Maximum automatic width".
+- Saat tidak ada media atau tidak ada teks, area widget di panel dibiarkan kosong.
 - **Lebar** auto (mengikuti baris terpanjang, dengan batas maksimum) atau manual (px).
 - **Popup** berisi transcript lengkap: baris aktif di-highlight dan auto-scroll. Klik baris untuk seek player.
 - Panel vertikal: widget tampil sebagai ikon, transcript dibaca lewat popup.

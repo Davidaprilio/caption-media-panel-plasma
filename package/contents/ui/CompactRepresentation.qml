@@ -5,10 +5,10 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.kirigami as Kirigami
 import "../code/cues.js" as Cues
-import "providers"
 
 // What lives in the panel. The width is computed once per transcript (auto)
-// or fixed (manual), so line changes never cause a panel relayout.
+// or fixed (manual), so line changes never cause a panel relayout. Without
+// a caption the area simply stays empty.
 MouseArea {
     id: compact
 
@@ -18,12 +18,7 @@ MouseArea {
     readonly property int lines: lyricMode ? Math.max(1, Math.min(5, cfg.visibleLines)) : 1
     readonly property int animationDuration: Kirigami.Units.longDuration > 0 ? cfg.animationDuration : 0
     readonly property bool showCaption: root.live && root.transcript.cues.length > 0
-    readonly property string idleText: {
-        if (!root.media.hasPlayer) {
-            return i18n("No media playing");
-        }
-        return root.transcript.status === TranscriptProvider.Loading ? i18n("Loading transcript…") : i18n("No transcript");
-    }
+    readonly property int textAlignment: [Text.AlignLeft, Text.AlignHCenter, Text.AlignRight][cfg.textAlignment] ?? Text.AlignLeft
 
     // Font: configured size (or theme default), shrunk until all lines fit the panel.
     readonly property font baseFont: {
@@ -47,6 +42,10 @@ MouseArea {
         return f;
     }
     readonly property real rowHeight: textMetrics.height
+    // Marquee mode: space between the active and the next line, and the slot
+    // the next line gets (longer text fades out).
+    readonly property real marqueeGap: Kirigami.Units.gridUnit
+    readonly property real marqueeNextWidth: 200
 
     property real _longestLine: 0
 
@@ -54,7 +53,8 @@ MouseArea {
         if (cfg.widthMode === 1) {
             return cfg.manualWidth;
         }
-        const content = showCaption ? _longestLine : idleMetrics.advanceWidth;
+        // Marquee shows the next line's slot too.
+        const content = !showCaption ? 0 : _longestLine + (lyricMode ? 0 : marqueeGap + marqueeNextWidth);
         return Math.ceil(Math.max(Kirigami.Units.gridUnit * 4, Math.min(cfg.maxAutoWidth, content)));
     }
 
@@ -101,11 +101,6 @@ MouseArea {
         id: measure
         font: compact.textFont
     }
-    TextMetrics {
-        id: idleMetrics
-        font: compact.textFont
-        text: compact.idleText
-    }
 
     // Vertical panels are too narrow for text: show an icon, read in the popup.
     Kirigami.Icon {
@@ -123,16 +118,6 @@ MouseArea {
         sourceComponent: compact.lyricMode ? lyricComponent : marqueeComponent
     }
 
-    PlasmaComponents3.Label {
-        anchors.fill: parent
-        visible: !compact.vertical && !compact.showCaption
-        text: compact.idleText
-        font: compact.textFont
-        elide: Text.ElideRight
-        verticalAlignment: Text.AlignVCenter
-        opacity: 0.45
-    }
-
     Component {
         id: lyricComponent
         Item {
@@ -148,6 +133,7 @@ MouseArea {
                 rowHeight: compact.rowHeight
                 textFont: compact.textFont
                 animationDuration: compact.animationDuration
+                horizontalAlignment: compact.textAlignment
             }
         }
     }
@@ -155,14 +141,17 @@ MouseArea {
     Component {
         id: marqueeComponent
         MarqueeView {
-            // Before the first cue, show it dimmed, like the lyric view does.
-            readonly property var cue: root.clock.currentCue ?? root.transcript.cues[0]
-            text: cue ? cue.text : ""
+            cues: root.transcript.cues
+            index: root.clock.currentIndex
             active: root.clock.active
             playing: root.clock.playing
-            cueDurationMs: cue ? (cue.end - cue.start) / root.clock.rate : 0
+            rate: root.clock.rate
             minimumSpeed: compact.cfg.marqueeSpeed
+            animationDuration: compact.animationDuration
             textFont: compact.textFont
+            horizontalAlignment: compact.textAlignment
+            gap: compact.marqueeGap
+            nextMaxWidth: compact.marqueeNextWidth
         }
     }
 }
