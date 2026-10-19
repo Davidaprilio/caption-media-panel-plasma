@@ -18,8 +18,8 @@ TranscriptProvider {
     property var urlPrefixes: ["https://open.spotify.com/", "https://music.youtube.com/"]
 
     readonly property string _key: media ? media.artist + "\u001f" + media.track + "\u001f" + media.album : ""
-    // The track to load: none while another provider is in use.
-    readonly property string _wanted: active ? _key : ""
+    // The track to load: none while another provider is in use (unless probing).
+    readonly property string _wanted: active || probing ? _key : ""
 
     providerId: "lrclib"
     displayName: "LRCLIB"

@@ -56,8 +56,10 @@ TestCase {
         displayName: "Empty"
         canHandle: media !== null && media.url.startsWith("https://multi.test/")
         property int loads: 0
-        onActiveChanged: {
-            if (active) {
+        // Works while in use or probed, like the real providers.
+        readonly property bool working: active || probing
+        onWorkingChanged: {
+            if (working) {
                 ++loads;
                 Qt.callLater(setUnavailable, "test: nothing here");
             } else {
@@ -71,14 +73,37 @@ TestCase {
         providerId: "cachedEmpty"
         displayName: "Cached empty"
         canHandle: media !== null && media.url.startsWith("https://multi.test/")
-        onActiveChanged: active ? setReady([]) : reset()
+        readonly property bool working: active || probing
+        onWorkingChanged: working ? setReady([]) : reset()
     }
 
     component SecondProvider: TranscriptProvider {
         providerId: "second"
         displayName: "Second"
         canHandle: media !== null && media.url.startsWith("https://multi.test/")
-        onActiveChanged: active ? setReady([{ start: 0, end: 1000, text: "second" }]) : reset()
+        readonly property bool working: active || probing
+        onWorkingChanged: working ? setReady([{ start: 0, end: 1000, text: "second" }]) : reset()
+    }
+
+    component ThirdProvider: TranscriptProvider {
+        providerId: "third"
+        displayName: "Third"
+        canHandle: media !== null && media.url.startsWith("https://multi.test/")
+        readonly property bool working: active || probing
+        onWorkingChanged: working ? setReady([{ start: 0, end: 1000, text: "third" }], "Third · test") : reset()
+    }
+
+    Component {
+        id: probeComponent
+        TranscriptSource {
+            media: fakeMedia
+            providers: [
+                EmptyProvider {},
+                SecondProvider {},
+                ThirdProvider {},
+                Fallback {}
+            ]
+        }
     }
 
     Component {
@@ -232,6 +257,62 @@ TestCase {
         // Media nobody claims still gets the fallback.
         fakeMedia.url = "";
         compare(source.current.providerId, "fallback");
+    }
+
+    function test_candidatesAndPinning() {
+        const source = createTemporaryObject(cascadeComponent, test);
+        fakeMedia.url = "https://multi.test/a";
+        compare(source.candidates.map(p => p.providerId), ["empty", "cachedEmpty", "second"], "fallback only when nothing else can");
+        tryCompare(source, "sourceName", "Second");
+
+        // A pinned provider is kept even when it has nothing: no cascade.
+        source.pin(provider(source, "empty"));
+        compare(source.current.providerId, "empty");
+        tryCompare(source, "status", TranscriptProvider.Unavailable);
+        wait(50);
+        compare(source.current.providerId, "empty");
+
+        source.pin(null);
+        tryCompare(source, "sourceName", "Second");
+
+        // A pin lasts for the current media only.
+        source.pin(provider(source, "cachedEmpty"));
+        compare(source.current.providerId, "cachedEmpty");
+        fakeMedia.trackKey = "t2";
+        compare(source.pinned, null);
+        compare(source.current.providerId, "empty", "automatic choice for the new media");
+    }
+
+    function test_probeListsSourcesWithTranscripts() {
+        const source = createTemporaryObject(probeComponent, test);
+        fakeMedia.url = "https://multi.test/a";
+        tryCompare(source, "sourceName", "Second");
+        // Without probing, the others don't look (no requests).
+        compare(source.available.map(p => p.providerId), ["second"]);
+        compare(provider(source, "third").status, TranscriptProvider.Idle);
+
+        // The popup opens: every candidate looks; only those with a transcript are listed.
+        source.probe = true;
+        tryVerify(() => !source.searching);
+        compare(source.available.map(p => p.providerId), ["second", "third"], "in priority order, empty ones left out");
+        compare(source.current.providerId, "second", "probing does not change the source in use");
+        compare(source.cues[0].text, "second");
+
+        // Picking one from the list.
+        source.pin(provider(source, "third"));
+        compare(source.current.providerId, "third");
+        compare(source.sourceName, "Third · test");
+        compare(source.cues[0].text, "third");
+
+        // The popup closes: the others stop and drop their results.
+        source.probe = false;
+        compare(source.available.map(p => p.providerId), ["third"]);
+        compare(provider(source, "second").status, TranscriptProvider.Idle);
+    }
+
+    function test_candidatesFallback() {
+        const source = createTemporaryObject(cascadeComponent, test);
+        compare(source.candidates.map(p => p.providerId), ["fallback"]);
     }
 
     Component {

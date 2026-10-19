@@ -3,6 +3,7 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.kcmutils as KCM
+import org.kde.kquickcontrols as KQuickControls
 
 KCM.SimpleKCM {
     id: page
@@ -25,6 +26,11 @@ KCM.SimpleKCM {
     property alias cfg_panelEqualizer: panelEqualizer.checked
     property alias cfg_popupEqualizer: popupEqualizer.checked
     property alias cfg_equalizerFollowsAudio: equalizerFollowsAudio.checked
+    property alias cfg_equalizerUseAccent: equalizerUseAccent.checked
+    property alias cfg_equalizerColor: equalizerColor.color
+    property alias cfg_panelEqualizerOpacity: panelEqualizerOpacity.value
+    property alias cfg_popupEqualizerOpacity: popupEqualizerOpacity.value
+    property alias cfg_popupAmbient: popupAmbient.checked
 
     Kirigami.FormLayout {
         QQC2.ComboBox {
@@ -150,6 +156,57 @@ KCM.SimpleKCM {
             id: equalizerFollowsAudio
             enabled: panelEqualizer.checked || popupEqualizer.checked
             text: i18n("Follow the audio output (runs cava while an equalizer is visible)")
+        }
+        RowLayout {
+            Kirigami.FormData.label: i18n("Equalizer color:")
+            enabled: panelEqualizer.checked || popupEqualizer.checked
+            QQC2.CheckBox {
+                id: equalizerUseAccent
+                text: i18n("Accent color")
+            }
+            KQuickControls.ColorButton {
+                id: equalizerColor
+                enabled: !equalizerUseAccent.checked
+                // Opacity has its own sliders below.
+                showAlphaChannel: false
+                dialogTitle: i18n("Equalizer Color")
+            }
+        }
+        RowLayout {
+            Kirigami.FormData.label: i18n("Panel equalizer opacity:")
+            enabled: panelEqualizer.checked
+            QQC2.Slider {
+                id: panelEqualizerOpacity
+                from: 5
+                to: 100
+                stepSize: 5
+            }
+            QQC2.Label {
+                text: i18nc("percent", "%1%", panelEqualizerOpacity.value)
+            }
+        }
+        RowLayout {
+            Kirigami.FormData.label: i18n("Popup equalizer opacity:")
+            enabled: popupEqualizer.checked
+            QQC2.Slider {
+                id: popupEqualizerOpacity
+                from: 5
+                to: 100
+                stepSize: 5
+            }
+            QQC2.Label {
+                text: i18nc("percent", "%1%", popupEqualizerOpacity.value)
+            }
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
+        }
+
+        QQC2.CheckBox {
+            id: popupAmbient
+            Kirigami.FormData.label: i18n("Popup:")
+            text: i18n("Ambient mode: the artwork glows behind the header")
         }
 
         Item {

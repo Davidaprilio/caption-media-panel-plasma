@@ -46,7 +46,7 @@ Target: KDE Plasma 6 (dites di Plasma 6.7.5, Qt 6.11, Wayland, CachyOS).
 | `code/dummyTranscript.js` | Teks dummy. |
 | `ui/LyricView.qml`, `ui/MarqueeView.qml` | Tampilan di panel. |
 | `ui/FullRepresentation.qml` | Popup transcript. Baru dibuat saat pertama kali dibuka. |
-| `ui/EqualizerBars.qml` | Equalizer di belakang header popup (config `popupEqualizer`): mengikuti `levels` kalau ada, dekoratif kalau tidak. |
+| `ui/EqualizerBars.qml` | Equalizer di panel dan di header popup: mengikuti `levels` kalau ada, dekoratif kalau tidak. Warna `root.equalizerColor` (aksen atau `equalizerColor`), opacity `panelEqualizerOpacity` / `popupEqualizerOpacity`. |
 | `ui/AudioLevels.qml`, `code/cava_bridge.py` | Level audio sungguhan dari cava (config `equalizerFollowsAudio`), lihat "Equalizer mengikuti audio". |
 
 ## Sinkronisasi waktu (CueClock)
@@ -238,6 +238,9 @@ Ukuran font otomatis mengecil kalau `N baris × tinggi baris` lebih besar dari t
   sesudahnya, yang ikut masuk dari kanan sampai tepat di posisi slot. Setelah geseran selesai, teks ditukar dan strip
   dikembalikan ke posisi awal tanpa terlihat, jadi tidak ada model atau delegate tambahan.
   Animasi otomatis mati kalau animasi Plasma dimatikan (`Kirigami.Units.longDuration == 0`).
+- Mode ambient popup (`popupAmbient`): artwork di-decode kecil (64×64), di-blur dengan `MultiEffect`, lalu di-mask
+  gradasi radial dari tengah thumbnail. Efek ini hanya dirender ulang saat artwork berubah, dan tidak dipakai di
+  renderer software.
 - Equalizer popup hanya beranimasi saat popup terbuka dan media diputar. Setelah itu bar turun ke posisi diam dan
   semua animasinya berhenti (diuji di `tests/tst_equalizer.qml`). Kalau dimatikan di setting, komponennya tidak dibuat.
 
@@ -262,6 +265,12 @@ Aturan router (`TranscriptSource`):
 3. Kalau tidak ada provider non-fallback yang `canHandle`, dipakai fallback pertama yang `enabled`. Selama URL media
    masih dicari (`media.urlPending`), fallback ditahan dulu supaya tidak sempat muncul sekejap.
 4. Hanya provider yang `active` boleh bekerja (request jaringan, proses). Provider lain memanggil `reset()`.
+6. **Pemilih sumber (footer popup):** `candidates` berisi provider yang `enabled` dan `canHandle` untuk media saat ini
+   (fallback hanya kalau tidak ada yang lain). Selama `probe` aktif (`root.expanded`, artinya popup terbuka), kandidat lain
+   ikut mencari dengan `probing = true`, sehingga `available` (yang statusnya Ready) berisi semua sumber yang **punya
+   lirik**. Hanya itu yang muncul di dropdown. Probe memakai request tambahan, jadi hanya berjalan saat popup terbuka,
+   dan hasilnya tetap di cache provider. `pin(provider)` memakai sumber yang dipilih, dan pilihan itu hilang saat media
+   berganti.
 5. Supaya jenjang tidak dicoba berulang tanpa perlu, provider sebaiknya meng-cache hasil "tidak ada" yang pasti
    (bukan kegagalan jaringan). Contohnya `remember(key, { cues: [] })`, lalu `setReady([])` saat cache hit.
 

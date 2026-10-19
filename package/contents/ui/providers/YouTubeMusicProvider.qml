@@ -16,11 +16,12 @@ TranscriptProvider {
     property var urlPrefixes: ["https://open.spotify.com/", "https://music.youtube.com/"]
 
     readonly property string _key: media ? [media.artist, media.track, media.album, media.url].join("\u001f") : ""
-    // The track to load: none while another provider is in use.
-    readonly property string _wanted: active ? _key : ""
+    // The track to load: none while another provider is in use (unless probing).
+    readonly property string _wanted: active || probing ? _key : ""
 
     providerId: "ytmusic"
-    displayName: "YouTube Music"
+    // Short: it is shown in the popup footer and its source picker.
+    displayName: "YT Music"
     canHandle: media !== null && media.track !== "" && media.artist !== ""
         && Lrclib.matchesPlayer(media.identity, media.desktopEntry, media.url, players, urlPrefixes)
 

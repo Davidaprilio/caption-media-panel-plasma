@@ -17,8 +17,8 @@ TranscriptProvider {
     property bool preferRomanized: true
 
     readonly property string _key: media ? [media.artist, media.track, media.album, preferRomanized].join("\u001f") : ""
-    // The track to load: none while another provider is in use.
-    readonly property string _wanted: active ? _key : ""
+    // The track to load: none while another provider is in use (unless probing).
+    readonly property string _wanted: active || probing ? _key : ""
 
     providerId: "netease"
     displayName: "NetEase"

@@ -13,6 +13,10 @@ import "providers"
 //     never stands in for media a real provider claimed.
 //  3. With no non-fallback provider interested, the first enabled fallback.
 // The tried list starts over whenever the media (track or URL) changes.
+//
+// While `probe` is set (the popup is open), the other candidates look for a
+// transcript too, so `available` lists every source that has one; the user
+// can pin one of them. The pin is dropped with the next media.
 QtObject {
     id: source
 
@@ -33,13 +37,46 @@ QtObject {
     }
     readonly property string sourceName: current ? current.sourceName : ""
 
+    // Providers that can serve the current media, in priority order: the
+    // choices for pinning. Fallbacks only when nothing else can.
+    readonly property var candidates: {
+        const specialised = [];
+        const fallbacks = [];
+        for (let i = 0; i < providers.length; ++i) {
+            const provider = providers[i];
+            if (provider.enabled && provider.canHandle) {
+                (provider.fallback ? fallbacks : specialised).push(provider);
+            }
+        }
+        return specialised.length > 0 ? specialised : fallbacks;
+    }
+    // Let the other candidates find out whether they have a transcript.
+    // Costs their requests, so only while someone looks (the popup).
+    property bool probe: false
+    // Candidates known to have a transcript for the current media, in priority order.
+    readonly property var available: candidates.filter(provider => provider.status === TranscriptProvider.Ready)
+    // True while some candidate is still looking.
+    readonly property bool searching: candidates.some(provider => provider.status === TranscriptProvider.Loading)
+    // The provider chosen by the user, or null for the automatic choice.
+    property TranscriptProvider pinned: null
+
+    function pin(provider) {
+        pinned = provider;
+    }
+
     // Providers that had nothing for the current media, in the order they gave up.
     property var _exhausted: []
     readonly property string _mediaKey: media ? media.trackKey + "\u001f" + media.url : ""
 
-    on_MediaKeyChanged: _exhausted = []
+    on_MediaKeyChanged: {
+        _exhausted = [];
+        pinned = null;
+    }
 
     function _choose() {
+        if (pinned && pinned.enabled && pinned.canHandle) {
+            return pinned;
+        }
         let fallback = null;
         let lastExhausted = null;
         for (let i = 0; i < providers.length; ++i) {
@@ -89,6 +126,7 @@ QtObject {
             provider.media = Qt.binding(() => source.media);
             provider.languages = Qt.binding(() => source.languages);
             provider.active = Qt.binding(() => source.current === provider);
+            provider.probing = Qt.binding(() => source.probe && source.current !== provider && source.candidates.indexOf(provider) !== -1);
         }
     }
 }

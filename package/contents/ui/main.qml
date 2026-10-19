@@ -21,6 +21,8 @@ PlasmoidItem {
     // Equalizers: one behind the panel caption, one behind the popup title.
     // Both read the same AudioLevels, so cava runs once for either or both.
     readonly property bool animationsEnabled: Kirigami.Units.longDuration > 0
+    readonly property color equalizerColor: Plasmoid.configuration.equalizerUseAccent
+        ? Kirigami.Theme.highlightColor : Plasmoid.configuration.equalizerColor
     readonly property bool panelEqualizerShown: Plasmoid.configuration.panelEqualizer && live
         && Plasmoid.formFactor !== PlasmaCore.Types.Vertical
     readonly property bool popupEqualizerShown: Plasmoid.configuration.popupEqualizer && expanded
@@ -58,6 +60,9 @@ PlasmoidItem {
     TranscriptSource {
         id: transcript
         media: root.media
+        // The popup's source picker lists the sources that have lyrics; only
+        // look them all up while it is open.
+        probe: root.expanded
         // System language first, English as the fallback.
         languages: {
             const system = Qt.locale().name.split("_")[0];

@@ -7,8 +7,8 @@ TranscriptProvider {
     id: provider
 
     readonly property string videoId: media ? YouTube.videoIdFromUrl(media.url) : ""
-    // The video to load: none while another provider is in use.
-    readonly property string _wanted: active ? videoId : ""
+    // The video to load: none while another provider is in use (unless probing).
+    readonly property string _wanted: active || probing ? videoId : ""
 
     providerId: "youtube"
     displayName: "YouTube"

@@ -139,8 +139,9 @@ MouseArea {
             fadeFromLeft: false
             // One render per audio frame instead of per display frame.
             animateLevels: false
-            // Faint, so the caption on top stays readable.
-            opacity: 0.3
+            color: root.equalizerColor
+            // Faint by default, so the caption on top stays readable.
+            opacity: compact.cfg.panelEqualizerOpacity / 100
         }
     }
 

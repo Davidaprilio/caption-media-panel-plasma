@@ -30,10 +30,13 @@ Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Saat tidak ada media atau tidak ada teks, area widget di panel dibiarkan kosong.
 - **Lebar** auto (mengikuti baris terpanjang, dengan batas maksimum) atau manual (px).
 - **Popup** berisi thumbnail/album art, judul dan artis, tombol previous / play-pause / next, serta transcript lengkap:
-  baris aktif di-highlight dan auto-scroll. Klik baris untuk seek player.
+  baris aktif di-highlight dan auto-scroll. Klik baris untuk seek player. Footer di bagian bawah menampilkan sumber
+  lirik yang dipakai, dan pilihan semua sumber yang **punya lirik** untuk lagu itu (dicek selama popup terbuka).
 - **Equalizer animasi** di belakang caption di panel dan di belakang judul popup (masing-masing bisa dimatikan). Kalau
   [cava](https://github.com/karlstav/cava) terpasang (`sudo pacman -S cava`), bar mengikuti suara yang keluar dari
-  speaker; tanpa cava, bar bergerak dekoratif. Kedua equalizer memakai satu sumber audio yang sama.
+  speaker; tanpa cava, bar bergerak dekoratif. Kedua equalizer memakai satu sumber audio yang sama. Warnanya (aksen
+  tema atau warna pilihan) dan opacity-nya (panel dan popup terpisah) bisa diatur.
+- **Mode ambient** di popup: artwork lagu di-blur dan memancar dari belakang thumbnail ke seluruh header (bisa dimatikan).
 - Panel vertikal: widget tampil sebagai ikon, transcript dibaca lewat popup.
 - *Demo mode* (opsional): memutar transcript dummy dengan jam lokal kalau tidak ada player.
 

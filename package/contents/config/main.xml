@@ -54,6 +54,28 @@
         <entry name="equalizerFollowsAudio" type="Bool">
             <default>true</default>
         </entry>
+        <!-- equalizer colour: the theme's accent, or equalizerColor -->
+        <entry name="equalizerUseAccent" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="equalizerColor" type="Color">
+            <default>#3daee9</default>
+        </entry>
+        <!-- equalizer opacity in percent, per place -->
+        <entry name="panelEqualizerOpacity" type="Int">
+            <default>30</default>
+            <min>5</min>
+            <max>100</max>
+        </entry>
+        <entry name="popupEqualizerOpacity" type="Int">
+            <default>35</default>
+            <min>5</min>
+            <max>100</max>
+        </entry>
+        <!-- blurred artwork glowing behind the popup header -->
+        <entry name="popupAmbient" type="Bool">
+            <default>true</default>
+        </entry>
         <!-- synced lyrics (and romanization) from NetEase Cloud Music -->
         <entry name="neteaseEnabled" type="Bool">
             <default>true</default>

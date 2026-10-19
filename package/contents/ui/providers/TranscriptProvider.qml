@@ -4,7 +4,8 @@ import QtQuick
 //
 // A provider declares whether it can serve the current media (`canHandle`)
 // and, once TranscriptSource makes it the `active` one, fills `cues` and
-// `status`. Only the active provider may do work (network, processes).
+// `status`. Only an active or probing provider may do work (network,
+// processes); a probing one runs the same way, but only its status is read.
 //
 // Minimal implementation:
 //
@@ -12,7 +13,7 @@ import QtQuick
 //         providerId: "lrclib"
 //         displayName: "LRCLIB"
 //         canHandle: media !== null && media.artist !== ""
-//         readonly property string _wanted: active ? media.trackKey : ""
+//         readonly property string _wanted: active || probing ? media.trackKey : ""
 //         on_WantedChanged: Qt.callLater(load)
 //         function load() { if (!_wanted) { reset(); return } setLoading(); ... setReady(cues) / setUnavailable(reason) }
 //     }
@@ -54,6 +55,10 @@ QtObject {
     property var languages: ["en"]
     // True while this provider is the one in use.
     property bool active: false
+    // True while another provider is in use but the user may pick this one
+    // (the popup's source picker): find out whether the media has a
+    // transcript here. Only `status` is read then.
+    property bool probing: false
 
     // --- Decision, overridden by the implementation ----------------------
 

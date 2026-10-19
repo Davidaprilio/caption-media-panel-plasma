@@ -1,6 +1,9 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Layouts
+import QtQuick.Effects
+import QtQuick.Shapes
+import QtQuick.Templates as T
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.extras as PlasmaExtras
@@ -28,6 +31,78 @@ PlasmaExtras.Representation {
             implicitWidth: headerRow.implicitWidth
             implicitHeight: headerRow.implicitHeight
 
+            // Ambient mode: the artwork, heavily blurred, glows out from behind
+            // the thumbnail and fades away. Decoded tiny (it is blurred anyway)
+            // and only re-rendered when the artwork changes; needs shaders.
+            Loader {
+                id: ambient
+                anchors.fill: parent
+                anchors.margins: -Kirigami.Units.smallSpacing
+                active: Plasmoid.configuration.popupAmbient && thumbnail.source !== ""
+                    && GraphicsInfo.api !== GraphicsInfo.Software
+                sourceComponent: Item {
+                    Image {
+                        id: ambientArt
+                        anchors.fill: parent
+                        source: thumbnail.source
+                        sourceSize: Qt.size(64, 64)
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        visible: false
+                    }
+
+                    MultiEffect {
+                        anchors.fill: parent
+                        source: ambientArt
+                        visible: ambientArt.status === Image.Ready
+                        opacity: 0.75
+                        blurEnabled: true
+                        blur: 1.0
+                        blurMax: 64
+                        saturation: 0.6
+                        maskEnabled: true
+                        maskSource: ambientGlow
+                        // Maps the mask's alpha linearly-ish onto the artwork.
+                        maskThresholdMin: 0.5
+                        maskSpreadAtMin: 1.0
+                    }
+
+                    // Strongest around the thumbnail, gone towards the far side.
+                    Shape {
+                        id: ambientGlow
+                        anchors.fill: parent
+                        visible: false
+                        layer.enabled: true
+                        ShapePath {
+                            strokeWidth: -1
+                            fillGradient: RadialGradient {
+                                centerX: Kirigami.Units.gridUnit * 2 + Kirigami.Units.smallSpacing
+                                centerY: ambientGlow.height / 2
+                                centerRadius: Math.max(ambientGlow.width * 0.6, Kirigami.Units.gridUnit * 6)
+                                focalX: centerX
+                                focalY: centerY
+                                GradientStop {
+                                    position: 0
+                                    color: "white"
+                                }
+                                GradientStop {
+                                    position: 0.45
+                                    color: Qt.rgba(1, 1, 1, 0.85)
+                                }
+                                GradientStop {
+                                    position: 1
+                                    color: "transparent"
+                                }
+                            }
+                            PathRectangle {
+                                width: ambientGlow.width
+                                height: ambientGlow.height
+                            }
+                        }
+                    }
+                }
+            }
+
             // Background of the right half; declared first, so the title, info
             // and buttons are drawn on top of it.
             Loader {
@@ -41,7 +116,8 @@ PlasmaExtras.Representation {
                     levels: root.audioLevels.levels
                     // Animates only while it can be seen and something plays.
                     running: root.popupEqualizerShown && root.clock.playing && root.animationsEnabled
-                    opacity: 0.35
+                    color: root.equalizerColor
+                    opacity: Plasmoid.configuration.popupEqualizerOpacity / 100
                 }
             }
 
@@ -108,7 +184,6 @@ PlasmaExtras.Representation {
                             if (root.media.identity && root.media.track) {
                                 parts.push(root.media.identity);
                             }
-                            parts.push(i18n("Source: %1", root.transcript.sourceName));
                             return parts.join(" · ");
                         }
                     }
@@ -155,6 +230,55 @@ PlasmaExtras.Representation {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Pinned below the transcript: where the lines come from, and the other
+    // sources that can serve this media.
+    footer: PlasmaExtras.PlasmoidHeading {
+        position: T.ToolBar.Footer
+        visible: root.live && root.transcript.candidates.length > 0
+
+        RowLayout {
+            anchors.fill: parent
+            spacing: Kirigami.Units.smallSpacing
+
+            PlasmaComponents3.Label {
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+                opacity: 0.7
+                text: {
+                    const transcript = root.transcript;
+                    // "sc" (source) keeps the footer short.
+                    if (transcript.status === TranscriptProvider.Loading) {
+                        return i18nc("sc = lyrics source", "sc: loading…");
+                    }
+                    if (!transcript.current || transcript.status === TranscriptProvider.Unavailable) {
+                        return i18nc("sc = lyrics source", "sc: none");
+                    }
+                    return i18nc("sc = lyrics source", "sc: %1", transcript.sourceName);
+                }
+            }
+
+            PlasmaComponents3.BusyIndicator {
+                Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                visible: root.transcript.searching
+                running: visible
+            }
+
+            // Only the sources that have lyrics for this media (looked up
+            // while the popup is open); picking one pins it.
+            PlasmaComponents3.ComboBox {
+                id: sourcePicker
+
+                readonly property var sources: root.transcript.available
+
+                visible: sources.length > 0
+                model: sources.map(provider => provider.sourceName || provider.displayName)
+                currentIndex: sources.indexOf(root.transcript.current)
+                onActivated: index => root.transcript.pin(sources[index])
             }
         }
     }
