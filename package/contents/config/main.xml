@@ -54,6 +54,14 @@
         <entry name="equalizerFollowsAudio" type="Bool">
             <default>true</default>
         </entry>
+        <!-- synced lyrics (and romanization) from NetEase Cloud Music -->
+        <entry name="neteaseEnabled" type="Bool">
+            <default>true</default>
+        </entry>
+        <!-- romanized lyrics when a source has them, original otherwise -->
+        <entry name="preferRomanized" type="Bool">
+            <default>true</default>
+        </entry>
         <!-- synced lyrics from LRCLIB for Spotify and YouTube Music -->
         <entry name="lrclibEnabled" type="Bool">
             <default>true</default>

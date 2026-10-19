@@ -65,12 +65,18 @@ PlasmoidItem {
         }
 
         // Transcript services, in priority order. To add one, implement
-        // TranscriptProvider (providers/) and list it here.
+        // TranscriptProvider (providers/) and list it here. Lyrics come before
+        // YouTube captions: for YouTube Music those are often translations.
+        // Plain YouTube videos are only claimed by YouTubeProvider.
         providers: [
-            YouTubeProvider {},
+            NeteaseProvider {
+                enabled: Plasmoid.configuration.neteaseEnabled
+                preferRomanized: Plasmoid.configuration.preferRomanized
+            },
             LrclibProvider {
                 enabled: Plasmoid.configuration.lrclibEnabled
             },
+            YouTubeProvider {},
             DummyProvider {
                 enabled: Plasmoid.configuration.dummyForOtherMedia || root.demo
             }

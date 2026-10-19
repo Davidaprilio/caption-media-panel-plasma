@@ -1,9 +1,8 @@
 import QtQuick
 import "../../code/lrclib.js" as Lrclib
 
-// Synced lyrics from LRCLIB for music players: Spotify, and YouTube Music
-// (listed after YouTubeProvider, so it is only asked when the video has no
-// captions).
+// Synced lyrics from LRCLIB for music players: Spotify and YouTube Music
+// (after NetEase, before YouTube captions in main.qml's list).
 // At most two requests per track: an exact lookup (title, artist, album,
 // duration), then a search when that finds nothing synced. Misses are
 // cached too, so replaying a song without lyrics does not ask again.
@@ -29,7 +28,13 @@ TranscriptProvider {
 
     // kmpris updates metadata one field at a time (the title changes before
     // the length), so wait until the change has settled.
-    on_WantedChanged: Qt.callLater(_loadWanted)
+    // The previous track's lyrics go at once, though.
+    on_WantedChanged: {
+        if (_wanted) {
+            setLoading();
+        }
+        Qt.callLater(_loadWanted);
+    }
 
     function _loadWanted() {
         load(_wanted);

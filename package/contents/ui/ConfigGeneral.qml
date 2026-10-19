@@ -19,6 +19,8 @@ KCM.SimpleKCM {
     property alias cfg_demoWhenIdle: demoWhenIdle.checked
     property alias cfg_dummyForOtherMedia: dummyForOtherMedia.checked
     property alias cfg_lrclibEnabled: lrclibEnabled.checked
+    property alias cfg_neteaseEnabled: neteaseEnabled.checked
+    property alias cfg_preferRomanized: preferRomanized.checked
     property alias cfg_panelEqualizer: panelEqualizer.checked
     property alias cfg_popupEqualizer: popupEqualizer.checked
     property alias cfg_equalizerFollowsAudio: equalizerFollowsAudio.checked
@@ -154,9 +156,18 @@ KCM.SimpleKCM {
         }
 
         QQC2.CheckBox {
-            id: lrclibEnabled
+            id: neteaseEnabled
             Kirigami.FormData.label: i18n("Sources:")
-            text: i18n("Synced lyrics from LRCLIB (Spotify, YouTube Music without captions)")
+            text: i18n("Synced lyrics from NetEase Cloud Music (Spotify, YouTube Music)")
+        }
+        QQC2.CheckBox {
+            id: preferRomanized
+            enabled: neteaseEnabled.checked
+            text: i18n("Romanized lyrics when available (e.g. romaji), else the original")
+        }
+        QQC2.CheckBox {
+            id: lrclibEnabled
+            text: i18n("Synced lyrics from LRCLIB (Spotify, YouTube Music)")
         }
 
         Item {

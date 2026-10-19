@@ -15,8 +15,9 @@ Target: KDE Plasma 6 (dites di Plasma 6.7.5, Qt 6.11, Wayland, CachyOS).
 ```
  MPRIS (D-Bus) ──► MediaSource.qml ──► CueClock.qml ◄── TranscriptSource.qml (router)
                    playing, rate,      posisi interpolasi,   providers: [ (urutan = prioritas)
-                   position, track,    currentIndex, active    YouTubeProvider  (URL YouTube)
-                                                               LrclibProvider   (Spotify → lirik)
+                   position, track,    currentIndex, active    NeteaseProvider  (musik → lirik + romaji)
+                                                               LrclibProvider   (musik → lirik)
+                                                               YouTubeProvider  (URL YouTube → caption)
                                                                DummyProvider    (fallback) ]
                                                              semua mengimplementasikan TranscriptProvider
                    url (via busctl)                          cues[] {start,end,text}
@@ -35,7 +36,8 @@ Target: KDE Plasma 6 (dites di Plasma 6.7.5, Qt 6.11, Wayland, CachyOS).
 | `ui/providers/TranscriptProvider.qml` | **Interface** semua service transkrip (lihat "Menambah service transkrip"). |
 | `ui/providers/HttpClient.qml` | HTTP async bersama untuk provider: header, timeout, retry untuk 503/429 (mengikuti `Retry-After`), pembatalan, dan pengabaian jawaban basi. |
 | `ui/providers/YouTubeProvider.qml`, `code/youtube.js` | Transkrip asli YouTube (lihat di bawah). |
-| `ui/providers/LrclibProvider.qml`, `code/lrclib.js` | Lirik tersinkron dari LRCLIB untuk Spotify (lihat di bawah). |
+| `ui/providers/NeteaseProvider.qml`, `code/netease.js` | Lirik tersinkron + romanisasi dari NetEase Cloud Music (lihat di bawah). |
+| `ui/providers/LrclibProvider.qml`, `code/lrclib.js` | Lirik tersinkron dari LRCLIB untuk Spotify dan YouTube Music (lihat di bawah). |
 | `ui/providers/DummyProvider.qml` | Provider fallback berisi teks dummy. |
 | `code/cues.js` | Binary search, batas cue berikutnya, dan helper. |
 | `code/dummyTranscript.js` | Teks dummy. |
@@ -96,9 +98,10 @@ Hasilnya di-cache di memori untuk 8 video terakhir.
 atau kalau URL halamannya diawali `https://open.spotify.com/` (Spotify Web lewat PBI) atau `https://music.youtube.com/`.
 Syarat lainnya: judul dan artis tidak kosong, sehingga iklan Spotify jatuh ke fallback.
 
-Untuk YouTube Music, `YouTubeProvider` ada di urutan lebih dulu, jadi caption YouTube dicoba dulu. Kalau videonya
-tidak punya caption (atau request gagal), router berjenjang ke LRCLIB. Video tanpa caption dicatat di cache
-YouTube, sehingga saat diputar ulang router langsung ke LRCLIB tanpa request ke YouTube.
+Urutan untuk musik (Spotify, YouTube Music) adalah **NetEase → LRCLIB → caption YouTube**; caption YouTube hanya
+berlaku untuk YouTube Music. Lirik diutamakan karena caption video musik di YouTube sering berupa terjemahan
+(contoh: MV resmi 優里 – ドライフラワー hanya punya caption Inggris, Mandarin, dan Korea). Video YouTube biasa hanya
+diklaim oleh `YouTubeProvider`.
 
 Setiap lagu memakai paling banyak dua request (header `User-Agent: caption-media-panel/…`):
 1. `GET /api/get` dengan judul, artis, album, dan durasi (toleransi ±2 detik).
@@ -117,6 +120,29 @@ Catatan dari pengujian (Oktober 2026):
 
 LRC yang didukung: beberapa timestamp dalam satu baris, `[offset:±ms]`, tag word-timing `<mm:ss.xx>` (diabaikan),
 baris kosong sebagai jeda, dan lagu instrumental (satu cue "♪ Instrumental ♪").
+
+## Lirik dan romanisasi NetEase
+
+`NeteaseProvider` menangani media yang sama dengan LRCLIB. Setiap lagu butuh 1 pencarian dan 1–4 request lirik
+(API tidak resmi, tanpa key). Satu respons lirik berisi `lrc` (asli), `romalrc` (romanisasi, misalnya romaji) dan
+`tlyric` (terjemahan Mandarin), semuanya tersinkron.
+
+- **Romanisasi:** dengan `preferRomanized` (default aktif), setiap baris memakai teks romanisasi kalau ada untuk
+  timestamp itu, dan teks asli kalau tidak ada (misalnya baris berbahasa Inggris di lagu Jepang). Gaya romaji
+  NetEase per suku kata ("ta bu n、wa ta shi ja na ku te"). Romanisasi Korea-nya tidak baku.
+- **Pencocokan lagu** (`rankSongs`): durasi harus cocok (±3 detik). Lalu salah satu syarat ini harus terpenuhi:
+  artis cocok, judul terjemahan (`transNames`) cocok, atau judul cocok dengan aksara non-Latin. Pemutar sering
+  menulis artis Asia dalam romaji ("Yuuri" untuk 優里). Lagu berjudul sama dari artis lain ditolak, begitu juga versi
+  lain (live, cover, "Chinese Version") kecuali media itu sendiri versi tersebut. Unggahan tanpa artis resmi
+  (artist id 0) diberi prioritas lebih rendah. Rilisan lain dari lagu yang sama (judul dan artist id sama) ikut jadi
+  kandidat, karena hanya sebagian rilisan yang punya romanisasi.
+- **Percobaan:** sampai 4 kandidat dicoba berurutan. Yang pertama punya lirik tersinkron dan romanisasi langsung
+  dipakai. Kalau tidak ada yang punya romanisasi, dipakai lirik asli dari kandidat pertama yang punya lirik.
+- **Cookie:** setiap endpoint NetEase memasang cookie `NMTID`. Klien yang mengirimnya kembali mendapat hasil
+  pencarian acak (diuji: 4 dari 4 pencarian berikutnya salah lagu). QML `XMLHttpRequest` selalu memakai cookie jar
+  bersama plasmashell, dan header `Cookie` tidak bisa ditimpa. Karena itu `HttpClient { cookieless: true }` mengirim
+  request lewat `curl` (tanpa cookie jar), dengan URL yang dikutip aman untuk shell karena judul berasal dari
+  player atau halaman web.
 
 ## Pemilihan player
 
