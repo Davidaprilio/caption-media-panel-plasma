@@ -1,70 +1,83 @@
 # Caption Media Panel
 
-Widget KDE Plasma 6 untuk panel yang menampilkan caption/transcript dari media yang sedang diputar
-(semua player MPRIS: browser, Spotify, VLC, dan lain-lain).
+**English** · [Bahasa Indonesia](README.id.md)
 
-**Status:**
-- **YouTube** di browser memakai transkrip asli dari YouTube (caption manual atau auto-generated).
-  Syaratnya: [Plasma Browser Integration](https://community.kde.org/Plasma/Browser_Integration) beserta ekstensi browser-nya terpasang.
-- **Spotify** (aplikasi desktop maupun Spotify Web) dan **YouTube Music** memakai lirik tersinkron dari NetEase Cloud
-  Music. Kalau tersedia, dipakai versi **romanisasi** (misalnya romaji untuk lagu Jepang); kalau tidak, teks aslinya.
-  Kalau NetEase tidak punya liriknya, dipakai lirik tersinkron dari YouTube Music (Musixmatch / LyricFind),
-  lalu [LRCLIB](https://lrclib.net), lalu (khusus YouTube Music) caption YouTube. Lirik tanpa timestamp tidak pernah
-  dipakai.
-- **Media lain** masih memakai transcript **dummy** yang mengikuti posisi player. Ini bisa dimatikan di pengaturan.
+A KDE Plasma 6 panel widget that shows synced captions and lyrics for whatever is playing
+(any MPRIS player: browsers, Spotify, VLC, …).
 
-Lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+**Where the text comes from:**
+- **YouTube** in a browser: the video's own captions (manual or auto-generated).
+  Needs [Plasma Browser Integration](https://community.kde.org/Plasma/Browser_Integration) and its browser extension.
+- **Spotify** (desktop app or Spotify Web) and **YouTube Music**: synced lyrics from NetEase Cloud Music, using the
+  **romanized** version when there is one (e.g. romaji for Japanese songs) and the original text otherwise. Without
+  NetEase lyrics: synced lyrics from YouTube Music (Musixmatch / LyricFind), then [LRCLIB](https://lrclib.net), then
+  (YouTube Music only) the video's captions. Lyrics without timestamps are never used.
+- **Other media**: a **dummy** transcript that follows the player's position (can be turned off in the settings).
 
-## Fitur
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Indonesian) for how it works.
 
-- **Mode lyric**: baris bergeser naik seperti lirik di aplikasi musik. Jumlah baris 1–5 (default 1).
-- **Mode marquee**: satu baris bergaya ticker. Baris berikutnya selalu terlihat di sisi kanan baris aktif dengan warna
-  redup, dalam slot maksimal 100 px; teks yang lebih panjang memudar dengan gradasi. Saat waktunya tiba, baris itu
-  bergeser ke kiri menggantikan baris aktif, bagian yang memudar ikut terbuka, dan lirik sesudahnya masuk dari kanan
-  ke slot yang ditinggalkan. Baris yang terlalu panjang digulir
-  dulu selama durasinya.
-- **Perataan teks**: kiri, tengah, atau kanan. Di mode marquee, yang diratakan adalah baris aktif ditambah slot 100 px,
-  sehingga posisi baris aktif tidak bergantung pada panjang baris berikutnya.
-- **Lebar auto** mengikuti baris terpanjang (lyric), atau baris terpanjang + slot baris berikutnya (marquee), dibatasi
-  "Maximum automatic width".
-- Saat tidak ada media atau tidak ada teks, area widget di panel dibiarkan kosong.
-- **Lebar** auto (mengikuti baris terpanjang, dengan batas maksimum) atau manual (px).
-- **Popup** berisi thumbnail/album art, judul dan artis, tombol previous / play-pause / next, serta transcript lengkap:
-  baris aktif di-highlight dan auto-scroll. Klik baris untuk seek player. Footer di bagian bawah menampilkan sumber
-  lirik yang dipakai, dan pilihan semua sumber yang **punya lirik** untuk lagu itu (dicek selama popup terbuka).
-- **Equalizer animasi** di belakang caption di panel dan di belakang judul popup (masing-masing bisa dimatikan). Kalau
-  [cava](https://github.com/karlstav/cava) terpasang (`sudo pacman -S cava`), bar mengikuti suara yang keluar dari
-  speaker; tanpa cava, bar bergerak dekoratif. Kedua equalizer memakai satu sumber audio yang sama. Warnanya (aksen
-  tema atau warna pilihan) dan opacity-nya (panel dan popup terpisah) bisa diatur.
-- **Mode ambient** di popup: artwork lagu di-blur dan memancar dari belakang thumbnail ke seluruh header (bisa dimatikan).
-- Panel vertikal: widget tampil sebagai ikon, transcript dibaca lewat popup.
-- *Demo mode* (opsional): memutar transcript dummy dengan jam lokal kalau tidak ada player.
+## Features
 
-## Instalasi dan pengembangan
+- **Lyric mode**: lines move up like in music apps; 1–5 visible lines (default 1).
+- **Marquee mode**: a one-line ticker. The next line always waits on the right of the active one, muted, in a slot of at
+  most 100 px whose overflow fades out. When its time comes it slides left into the active place, its faded tail is
+  revealed, and the line after it rides in from the right. Lines too long for the panel scroll within their duration.
+- **Text alignment**: left, center or right. In marquee mode the active line plus the 100 px slot is aligned, so the
+  active line does not move with the length of the next one.
+- **Width**: automatic (longest line, or longest line + next-line slot in marquee mode, capped by
+  "Maximum automatic width") or fixed in pixels.
+- With no media or no text, the widget's area in the panel stays empty.
+- **Popup**: artwork, title and artist, previous / play-pause / next buttons, and the whole transcript with the active
+  line highlighted and auto-scrolled; click a line to seek. The footer shows the source in use and lets you pick any
+  other source that **has lyrics** for the current track (checked while the popup is open).
+- **Equalizer** behind the panel caption and behind the popup title (each can be turned off). With
+  [cava](https://github.com/karlstav/cava) installed (`sudo pacman -S cava`) the bars follow the sound coming out of
+  the speakers; without it they move decoratively. Both share one audio source. Color (theme accent or your own) and
+  opacity (panel and popup separately) are configurable.
+- **Ambient mode** in the popup: the artwork, blurred, glows out from behind the thumbnail across the header
+  (can be turned off).
+- Vertical panels: the widget shows an icon; read the transcript in the popup.
+- Optional *demo mode*: plays the dummy transcript on a local clock when no player is running.
+
+## Requirements
+
+- KDE Plasma 6 (developed on Plasma 6.7 / Qt 6.11, Wayland).
+- `curl` (NetEase requests) and `busctl` (systemd; reads browser media URLs).
+- For browser media: Plasma Browser Integration and its browser extension.
+- Optional, for an equalizer that follows the audio: `cava` and `python3` (only the standard library).
+
+The widget itself is pure QML: no build step and no native plugin running inside plasmashell.
+
+## Install and develop
 
 ```fish
-./scripts/dev.sh install    # pasang / upgrade untuk user ini
-./scripts/dev.sh restart    # restart plasmashell supaya perubahan QML terbaca
+./scripts/dev.sh install    # install / upgrade for the current user
+./scripts/dev.sh restart    # restart plasmashell so the panel picks up QML changes
 ./scripts/dev.sh reload     # install + restart
-./scripts/dev.sh view       # jalankan di plasmoidviewer (perlu: sudo pacman -S plasma-sdk)
+./scripts/dev.sh view       # run in plasmoidviewer (needs: sudo pacman -S plasma-sdk)
 ./scripts/dev.sh lint       # qmllint
 ./scripts/dev.sh remove     # uninstall
 ```
 
-Setelah install: klik kanan panel → **Add Widgets…** → cari "Caption Media Panel".
+After installing: right-click the panel → **Add Widgets…** → search for "Caption Media Panel".
 
-## Test
+## Tests
 
 ```fish
-# unit test CueClock + helper (headless)
+# unit tests (headless, no network: providers are tested against recorded response shapes)
 QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests
 
-# fake player MPRIS untuk mencoba widget tanpa media sungguhan
+# a fake MPRIS player, to try the widget without real media
 tests/fake_mpris_player.py --length 600 --script "10:pause,13:play,16:seek=120,25:quit"
 
-# berpura-pura menjadi Spotify (lirik dari LRCLIB)
+# pretend to be Spotify (lyrics from NetEase / YouTube Music / LRCLIB)
 tests/fake_mpris_player.py --identity Spotify --desktop-entry spotify \
     --title blue --artist "yung kai" --album blue --length 214
 ```
 
-`fake_mpris_player.py` memakai Python sistem (`/usr/bin/python3`), karena butuh `python-dbus` dan `python-gobject`.
+`fake_mpris_player.py` uses the system Python (`/usr/bin/python3`): it needs `python-dbus` and `python-gobject`.
+
+## Note on the lyrics sources
+
+YouTube captions, YouTube Music lyrics and NetEase lyrics come from unofficial APIs (no key, no login). They can change
+at any time; when one stops working, the widget falls back to the next source, down to LRCLIB.
