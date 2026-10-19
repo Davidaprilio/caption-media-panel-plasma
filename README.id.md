@@ -33,7 +33,8 @@ Cara kerjanya dijelaskan di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **Popup**: artwork, judul dan artis, tombol previous / play-pause / next, serta transcript lengkap dengan baris aktif
   yang di-highlight dan auto-scroll; klik baris untuk seek. Footer menampilkan sumber yang dipakai, dan bisa memilih
   sumber lain yang **punya lirik** untuk lagu itu (dicek selama popup terbuka). Lirik tanpa sinkron ditampilkan sebagai
-  teks biasa yang bisa di-scroll, dengan tanda "unsynced" di footer.
+  teks biasa yang bisa di-scroll, dengan tanda "unsynced" di footer. Kalau daftar digulir sendiri, auto-scroll berhenti
+  dan muncul tombol **Follow lyrics** untuk kembali ke baris yang sedang diputar (scroll halus) dan mengikutinya lagi.
 - **Equalizer** di belakang caption di panel dan di belakang judul popup (masing-masing bisa dimatikan). Kalau
   [cava](https://github.com/karlstav/cava) terpasang (`sudo pacman -S cava`), bar mengikuti suara yang keluar dari
   speaker; tanpa cava, bar bergerak dekoratif. Keduanya memakai satu sumber audio yang sama. Warna (aksen tema atau

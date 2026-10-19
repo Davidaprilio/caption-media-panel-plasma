@@ -218,6 +218,22 @@ cava (PipeWire, 20 bar, 30 fps, ASCII) ─stdout─► cava_bridge.py ─WebSock
   RAM ~15 MB + ~12 MB, dan itu hanya selama popup terbuka. Sebagai pembanding, prototipe Python+numpy butuh ~2,6% dan
   ~35 MB. Versi pertama bridge yang memakai asyncio justru lebih boros daripada cava (1,4%, 25 MB).
 
+## Scroll di popup
+
+- Highlight dan scroll di popup diatur sendiri (`showIndex()`), bukan oleh ListView: baris aktif digeser halus ke
+  tengah, lompatan jauh (lebih dari 3 baris) langsung tanpa animasi, dan tidak ada scroll selama popup tertutup.
+- **Mode ikut (`following`)**: begitu pengguna menggulir sendiri, auto-scroll berhenti. Highlight tetap pindah
+  mengikuti lagu, dan muncul tombol pill **"Follow lyrics"** ("Follow captions" untuk caption YouTube). Panahnya menunjuk
+  ke arah baris yang sedang diputar. Klik tombol itu untuk scroll halus ke baris tersebut, sejauh apa pun, lalu daftar
+  kembali mengikuti. Popup juga kembali mengikuti saat dibuka ulang, saat transcript berganti, dan saat sebuah baris
+  diklik (seek). Baris yang diklik dan sedang terlihat di layar digeser halus ke tengah, tidak melompat.
+- Deteksi: ScrollView Plasma menggulir roda mouse dan touchpad lewat `Kirigami.WheelHandler`. Handler itu adalah event
+  filter yang menelan event dan tidak memancarkan `movementStarted`. Karena itu ada `MouseArea` transparan di atas daftar
+  (`acceptedButtons: Qt.NoButton`, `wheel.accepted = false`) yang melihat event roda lebih dulu lalu meneruskannya. Drag
+  scrollbar dideteksi dari `ScrollBar.vertical.pressed`, dan flick di layar sentuh dari `movementStarted`.
+- Saat scroll jauh, baris-baris yang dilewati baru ditata ketika dilalui, sehingga baris panjang yang terbungkus bisa
+  membuat target meleset beberapa piksel. Setelah animasi selesai, sisanya diluncurkan sekali lagi (`_landed()`).
+
 ## Lebar di panel
 
 - **Auto**: lebar baris terpanjang di transcript (mode lyric), atau baris terpanjang + jarak + slot 100 px untuk baris

@@ -291,6 +291,8 @@ PlasmaExtras.Representation {
 
     contentItem: Item {
         PlasmaComponents3.ScrollView {
+            id: scrollView
+
             anchors.fill: parent
             visible: !full.plainShown
 
@@ -301,31 +303,85 @@ PlasmaExtras.Representation {
                 readonly property int animationDuration: Kirigami.Units.longDuration > 0 ? Plasmoid.configuration.animationDuration : 0
                 // Far seeks (and opening the popup) jump instead of sliding past every line.
                 property bool _jumping: true
+                // Cleared when the user scrolls away; the follow button sets it again.
+                property bool following: true
+                // Where the current line is while the user reads elsewhere (the button's arrow).
+                property bool currentAbove: false
+                property int _scrollTarget: -1
+                property bool _correcting: false
 
-                // Moves the highlight to index and keeps it centred. The view's own
-                // highlight handling is not used, so the slide can be eased.
+                // Moves the highlight to index and, while following, keeps it centred.
+                // The view's own highlight handling is not used, so the slide can be eased.
                 function showIndex(index, jump) {
                     _jumping = jump || animationDuration === 0 || currentIndex < 0 || Math.abs(index - currentIndex) > 3;
                     currentIndex = index;
-                    // Nothing to scroll while the popup is closed, or while the user scrolls.
-                    if (index < 0 || !root.expanded || moving) {
+                    if (!following) {
+                        _updateCurrentAbove();
+                    }
+                    // Nothing to scroll while the popup is closed, or while the user reads elsewhere.
+                    if (index < 0 || !root.expanded || !following) {
                         return;
                     }
-                    const from = contentY;
-                    positionViewAtIndex(index, ListView.Center);
-                    if (_jumping) {
-                        scrollAnimation.stop();
-                        return;
-                    }
-                    const to = contentY;
-                    contentY = from;
-                    scrollAnimation.to = to;
-                    scrollAnimation.restart();
+                    // A far line that is on screen (a clicked one) still scrolls smoothly.
+                    _centre(index, !_jumping || (!jump && animationDuration > 0 && _onScreen(index)), animationDuration * 1.6);
                 }
 
                 // Reads the index when it runs, not when it is scheduled.
                 function jumpToCurrent() {
+                    following = true;
                     showIndex(root.clock.currentIndex, true);
+                }
+
+                // The user scrolls: stop following until asked to.
+                function stopFollowing() {
+                    if (following && count > 0 && contentHeight > height) {
+                        following = false;
+                        scrollAnimation.stop();
+                        _updateCurrentAbove();
+                    }
+                }
+
+                // Back to the current line, smoothly however far it is, and follow it again.
+                function follow() {
+                    following = true;
+                    if (count > 0 && root.expanded) {
+                        _centre(Math.max(0, root.clock.currentIndex), animationDuration > 0, animationDuration * 2.5);
+                    }
+                }
+
+                function _centre(index, animate, duration, correction) {
+                    _scrollTarget = index;
+                    _correcting = correction === true;
+                    const from = contentY;
+                    positionViewAtIndex(index, ListView.Center);
+                    const to = contentY;
+                    if (!animate || Math.abs(to - from) < 1) {
+                        scrollAnimation.stop();
+                        return;
+                    }
+                    contentY = from;
+                    scrollAnimation.duration = duration;
+                    scrollAnimation.to = to;
+                    scrollAnimation.restart();
+                }
+
+                // Rows between here and a far target are only laid out on the way,
+                // so wrapped ones can leave it a little off centre: glide the rest, once.
+                function _landed() {
+                    const item = itemAtIndex(_scrollTarget);
+                    if (following && !_correcting && item && Math.abs(item.y + item.height / 2 - contentY - height / 2) >= 1) {
+                        _centre(_scrollTarget, true, animationDuration, true);
+                    }
+                }
+
+                function _onScreen(index) {
+                    const item = itemAtIndex(index);
+                    return item !== null && item.y + item.height > contentY && item.y < contentY + height;
+                }
+
+                function _updateCurrentAbove() {
+                    const centre = indexAt(width / 2, contentY + height / 2);
+                    currentAbove = centre !== -1 && root.clock.currentIndex < centre;
                 }
 
                 model: root.live ? root.transcript.cues : []
@@ -336,6 +392,23 @@ PlasmaExtras.Representation {
 
                 onCountChanged: Qt.callLater(jumpToCurrent)
                 Component.onCompleted: jumpToCurrent()
+                // Touch flicks. Wheel and touchpad scrolling go through Plasma's
+                // wheel handler instead, which emits no movement signals (see wheelWatcher).
+                onMovementStarted: stopFollowing()
+                onContentYChanged: {
+                    if (!following) {
+                        _updateCurrentAbove();
+                    }
+                }
+
+                Connections {
+                    target: scrollView.T.ScrollBar.vertical
+                    function onPressedChanged() {
+                        if (scrollView.T.ScrollBar.vertical.pressed) {
+                            transcript.stopFollowing();
+                        }
+                    }
+                }
 
                 Connections {
                     target: root.clock
@@ -356,8 +429,8 @@ PlasmaExtras.Representation {
                     id: scrollAnimation
                     target: transcript
                     property: "contentY"
-                    duration: transcript.animationDuration * 1.6
                     easing.type: Easing.OutCubic
+                    onFinished: transcript._landed()
                 }
 
                 highlight: PlasmaExtras.Highlight {
@@ -390,7 +463,15 @@ PlasmaExtras.Representation {
 
                     width: ListView.view.width
                     hoverEnabled: transcript.seekable
-                    onClicked: root.seekTo(modelData.start)
+                    onClicked: {
+                        if (transcript.seekable) {
+                            root.seekTo(modelData.start);
+                            // Reading elsewhere: follow again from the clicked line.
+                            if (!transcript.following) {
+                                transcript.follow();
+                            }
+                        }
+                    }
 
                     contentItem: RowLayout {
                         spacing: Kirigami.Units.largeSpacing
@@ -432,6 +513,69 @@ PlasmaExtras.Representation {
                         return root.transcript.status === TranscriptProvider.Loading ? i18n("Loading transcript…") : i18n("No transcript for this media");
                     }
                     explanation: root.live ? "" : i18n("Start a media player to see its transcript here.")
+                }
+            }
+        }
+
+        // Sees wheel and touchpad scrolling before Plasma's ScrollView does
+        // (its wheel handler swallows the event) and lets it through.
+        MouseArea {
+            id: wheelWatcher
+            anchors.fill: scrollView
+            enabled: scrollView.visible
+            acceptedButtons: Qt.NoButton
+            onWheel: wheel => {
+                transcript.stopFollowing();
+                wheel.accepted = false;
+            }
+        }
+
+        // Back to the current line once the user has scrolled away.
+        PlasmaComponents3.Button {
+            id: followButton
+
+            readonly property bool shown: scrollView.visible && !transcript.following
+
+            anchors.horizontalCenter: scrollView.horizontalCenter
+            anchors.bottom: scrollView.bottom
+            anchors.bottomMargin: shown ? Kirigami.Units.largeSpacing : 0
+            opacity: shown ? 1 : 0
+            visible: opacity > 0
+            enabled: shown
+            // An accent pill: a themed button frame is barely visible over the text.
+            Kirigami.Theme.colorSet: Kirigami.Theme.Selection
+            Kirigami.Theme.inherit: false
+            leftPadding: Kirigami.Units.largeSpacing * 1.5
+            rightPadding: Kirigami.Units.largeSpacing * 1.5
+            topPadding: Kirigami.Units.smallSpacing * 1.5
+            bottomPadding: Kirigami.Units.smallSpacing * 1.5
+            background: Kirigami.ShadowedRectangle {
+                radius: height / 2
+                color: followButton.down ? Qt.darker(Kirigami.Theme.backgroundColor, 1.15)
+                    : followButton.hovered ? Qt.lighter(Kirigami.Theme.backgroundColor, 1.1) : Kirigami.Theme.backgroundColor
+                shadow.size: Kirigami.Units.largeSpacing
+                shadow.yOffset: 1
+                shadow.color: Qt.rgba(0, 0, 0, 0.3)
+            }
+            icon.name: transcript.currentAbove ? "go-up-symbolic" : "go-down-symbolic"
+            icon.color: Kirigami.Theme.textColor
+            text: {
+                const current = root.transcript.current;
+                return current && current.providerId === "youtube" ? i18n("Follow captions") : i18n("Follow lyrics");
+            }
+            onClicked: transcript.follow()
+
+            Behavior on opacity {
+                enabled: transcript.animationDuration > 0
+                NumberAnimation {
+                    duration: transcript.animationDuration
+                }
+            }
+            Behavior on anchors.bottomMargin {
+                enabled: transcript.animationDuration > 0
+                NumberAnimation {
+                    duration: transcript.animationDuration
+                    easing.type: Easing.OutCubic
                 }
             }
         }

@@ -31,7 +31,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Indonesian) for how it works.
 - **Popup**: artwork, title and artist, previous / play-pause / next buttons, and the whole transcript with the active
   line highlighted and auto-scrolled; click a line to seek. The footer shows the source in use and lets you pick any
   other source that **has lyrics** for the current track (checked while the popup is open). Unsynced lyrics are shown
-  as scrollable plain text, marked "unsynced" in the footer.
+  as scrollable plain text, marked "unsynced" in the footer. Scrolling the list yourself pauses auto-scroll; a
+  **Follow lyrics** button glides back to the current line and follows it again.
 - **Equalizer** behind the panel caption and behind the popup title (each can be turned off). With
   [cava](https://github.com/karlstav/cava) installed (`sudo pacman -S cava`) the bars follow the sound coming out of
   the speakers; without it they move decoratively. Both share one audio source. Color (theme accent or your own) and
