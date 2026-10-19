@@ -6,13 +6,15 @@
                 "Name": "David"
             }
         ],
+        "BugReportUrl": "https://github.com/Davidaprilio/caption-media-panel-plasma/issues",
         "Category": "Multimedia",
-        "Description": "Shows captions / transcript of the media that is currently playing",
+        "Description": "Synced lyrics and captions for whatever is playing",
         "Icon": "media-view-subtitles-symbolic",
-        "Id": "com.deptechdigital.captionpanel",
+        "Id": "io.github.davidaprilio.captionpanel",
         "License": "GPL-2.0-or-later",
         "Name": "Caption Media Panel",
-        "Version": "0.1.0"
+        "Version": "0.1.0",
+        "Website": "https://github.com/Davidaprilio/caption-media-panel-plasma"
     },
     "KPackageStructure": "Plasma/Applet",
     "X-Plasma-API-Minimum-Version": "6.0"

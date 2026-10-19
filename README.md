@@ -59,10 +59,12 @@ The widget itself is pure QML: no build step and no native plugin running inside
 ./scripts/dev.sh reload     # install + restart
 ./scripts/dev.sh view       # run in plasmoidviewer (needs: sudo pacman -S plasma-sdk)
 ./scripts/dev.sh lint       # qmllint
+./scripts/dev.sh package    # build dist/caption-media-panel-<version>.plasmoid (KDE Store upload)
 ./scripts/dev.sh remove     # uninstall
 ```
 
 After installing: right-click the panel → **Add Widgets…** → search for "Caption Media Panel".
+A `.plasmoid` file can also be installed with `kpackagetool6 -t Plasma/Applet -i <file>.plasmoid`.
 
 ## Tests
 
