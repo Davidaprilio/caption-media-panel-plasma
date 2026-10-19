@@ -11,7 +11,8 @@ A KDE Plasma 6 panel widget that shows synced captions and lyrics for whatever i
 - **Spotify** (desktop app or Spotify Web) and **YouTube Music**: synced lyrics from NetEase Cloud Music, using the
   **romanized** version when there is one (e.g. romaji for Japanese songs) and the original text otherwise. Without
   NetEase lyrics: synced lyrics from YouTube Music (Musixmatch / LyricFind), then [LRCLIB](https://lrclib.net), then
-  (YouTube Music only) the video's captions. Lyrics without timestamps are never used.
+  (YouTube Music only) the video's captions. When no source has synced lyrics but one has **unsynced** lyrics
+  (YouTube Music or LRCLIB), they are shown as plain text in the popup; the panel stays empty.
 - **Other media**: a **dummy** transcript that follows the player's position (can be turned off in the settings).
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Indonesian) for how it works.
@@ -29,7 +30,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Indonesian) for how it works.
 - With no media or no text, the widget's area in the panel stays empty.
 - **Popup**: artwork, title and artist, previous / play-pause / next buttons, and the whole transcript with the active
   line highlighted and auto-scrolled; click a line to seek. The footer shows the source in use and lets you pick any
-  other source that **has lyrics** for the current track (checked while the popup is open).
+  other source that **has lyrics** for the current track (checked while the popup is open). Unsynced lyrics are shown
+  as scrollable plain text, marked "unsynced" in the footer.
 - **Equalizer** behind the panel caption and behind the popup title (each can be turned off). With
   [cava](https://github.com/karlstav/cava) installed (`sudo pacman -S cava`) the bars follow the sound coming out of
   the speakers; without it they move decoratively. Both share one audio source. Color (theme accent or your own) and

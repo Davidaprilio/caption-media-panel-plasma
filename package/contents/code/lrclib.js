@@ -94,6 +94,19 @@ function pickResult(results, durationS) {
     return best;
 }
 
+// Plain lyrics of the first result within SEARCH_TOLERANCE_S (any result
+// when the duration is unknown), or "". For when nothing has synced lyrics.
+function pickPlain(results, durationS) {
+    for (let i = 0; i < results.length; ++i) {
+        const record = results[i];
+        const plain = record && !record.instrumental ? String(record.plainLyrics || "").trim() : "";
+        if (plain && (!(durationS > 0) || Math.abs(record.duration - durationS) <= SEARCH_TOLERANCE_S)) {
+            return plain;
+        }
+    }
+    return "";
+}
+
 // "[mm:ss.xx]" fraction digits -> ms ("5" = 500, "14" = 140, "140" = 140).
 function _timeMs(minutes, seconds, fraction) {
     const fractionMs = fraction ? Math.round(parseInt(fraction, 10) * Math.pow(10, 3 - fraction.length)) : 0;

@@ -88,6 +88,21 @@ TestCase {
         compare(YTMusic.timedCues(null), null);
     }
 
+    function test_plainLyrics() {
+        const plain = YTMusic.plainLyrics(browseResponse([
+            { lyricLine: " Know you're all that I want " },
+            { lyricLine: "" }, { lyricLine: "" }, { lyricLine: "" },
+            { lyricLine: "this life" },
+        ], "Source: LyricFind"));
+        compare(plain.text, "Know you're all that I want\n\nthis life", "trimmed, at most one blank line");
+        compare(plain.source, "LyricFind");
+        compare(YTMusic.plainLyrics(browseResponse([timed("a", 0, 1000, 1), { lyricLine: "b" }], "")).text, "a\nb", "partly timed is plain");
+        compare(YTMusic.plainLyrics(browseResponse([timed("a", 0, 1000, 1)], "")), null, "synced lyrics are not plain");
+        compare(YTMusic.plainLyrics(browseResponse([{ lyricLine: " " }], "")), null);
+        compare(YTMusic.plainLyrics(browseResponse([], "")), null);
+        compare(YTMusic.plainLyrics(null), null);
+    }
+
     // Shaped like a "Songs" search result row.
     function song(videoId, title, artists, album, duration) {
         const second = [];

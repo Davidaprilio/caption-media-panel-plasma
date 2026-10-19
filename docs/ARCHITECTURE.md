@@ -118,6 +118,8 @@ Catatan dari pengujian (Oktober 2026):
   sampai 2 kali kalau mendapat 503/429.
 - `/api/get-cached` menjawab 404 bahkan untuk lagu yang ada, jadi tidak dipakai.
 - Hasil "tidak ditemukan" di-cache, tetapi request yang gagal tidak, sehingga lagu itu dicoba lagi saat diputar ulang.
+- Entri yang hanya punya `plainLyrics` (tanpa `syncedLyrics`) tidak dipakai sebagai lirik tersinkron, tetapi disimpan
+  sebagai cadangan (`pickPlain()`, durasi ±3 detik) untuk ditampilkan sebagai teks biasa di popup.
 - kmpris mengubah metadata satu per satu: judul berubah lebih dulu, baru durasi. Pencarian ditunda dengan
   `Qt.callLater` supaya memakai durasi lagu yang benar.
 
@@ -164,7 +166,8 @@ Alurnya:
   sedangkan versi "song"-nya tersinkron. Karena data *counterpart* tidak tersedia tanpa login, versi song dicari lewat
   `search` (+3 request).
 - **Spotify:** `search`, lalu `next` + `browse` (3 request).
-- Lirik baru dipakai kalau **semua baris** punya `cueRange`. Lirik tanpa timestamp dianggap tidak ada.
+- Lirik dianggap tersinkron hanya kalau **semua baris** punya `cueRange`. Lirik tanpa timestamp disimpan sebagai
+  cadangan (`plainLyrics()`) dan hanya tampil sebagai teks biasa di popup kalau tidak ada sumber lain yang tersinkron.
 - Tidak ada romanisasi, selalu aksara asli. Karena itu NetEase tetap di urutan pertama.
 
 Uji Oktober 2026: 8 dari 8 lagu (Barat, Indonesia, Jepang, Korea) tersinkron lewat versi song-nya, sama untuk wilayah
@@ -253,7 +256,7 @@ Setiap service adalah turunan dari `providers/TranscriptProvider.qml`:
 | Deskripsi | `providerId`, `displayName`, `fallback`, `enabled` | provider (`enabled` boleh dari config) |
 | Input | `media` (MediaSource), `languages`, `active` | `TranscriptSource` |
 | Keputusan | `canHandle`: binding murah, "apakah media ini bisa saya layani?" | provider |
-| Output | `cues`, `status` (enum `TranscriptProvider.Idle/Loading/Ready/Unavailable`), `sourceName` | provider, lewat `setLoading()`, `setReady()`, `setUnavailable()`, `reset()` |
+| Output | `cues`, `status` (enum `TranscriptProvider.Idle/Loading/Ready/Unavailable`), `sourceName`, `plainText` (lirik tanpa timestamp) | provider, lewat `setLoading()`, `setReady()`, `setUnavailable()`, `setPlainOnly()`, `setFromCache()`, `reset()` |
 | Helper | `cached()` / `remember()` (cache memori), `HttpClient` | dipakai provider |
 
 Aturan router (`TranscriptSource`):
@@ -265,14 +268,21 @@ Aturan router (`TranscriptSource`):
 3. Kalau tidak ada provider non-fallback yang `canHandle`, dipakai fallback pertama yang `enabled`. Selama URL media
    masih dicari (`media.urlPending`), fallback ditahan dulu supaya tidak sempat muncul sekejap.
 4. Hanya provider yang `active` boleh bekerja (request jaringan, proses). Provider lain memanggil `reset()`.
+5. Supaya jenjang tidak dicoba berulang tanpa perlu, provider sebaiknya meng-cache hasil "tidak ada" yang pasti
+   (bukan kegagalan jaringan). Contohnya `remember(key, { cues: [] })`, lalu `setFromCache(hit)` saat cache hit.
 6. **Pemilih sumber (footer popup):** `candidates` berisi provider yang `enabled` dan `canHandle` untuk media saat ini
    (fallback hanya kalau tidak ada yang lain). Selama `probe` aktif (`root.expanded`, artinya popup terbuka), kandidat lain
    ikut mencari dengan `probing = true`, sehingga `available` (yang statusnya Ready) berisi semua sumber yang **punya
    lirik**. Hanya itu yang muncul di dropdown. Probe memakai request tambahan, jadi hanya berjalan saat popup terbuka,
    dan hasilnya tetap di cache provider. `pin(provider)` memakai sumber yang dipilih, dan pilihan itu hilang saat media
    berganti.
-5. Supaya jenjang tidak dicoba berulang tanpa perlu, provider sebaiknya meng-cache hasil "tidak ada" yang pasti
-   (bukan kegagalan jaringan). Contohnya `remember(key, { cues: [] })`, lalu `setReady([])` saat cache hit.
+7. **Lirik tanpa sinkron:** provider bisa menyerah (`Unavailable`) sambil membawa lirik tanpa timestamp lewat
+   `setPlainOnly(text, label)` (cache: `{ cues: [], label, plain }`). Router mencatatnya saat provider itu menyerah
+   (`_plainFound`), karena provider yang tidak dipakai lagi akan `reset()`. Lirik itu baru diberikan sebagai
+   `plainText` / `plainSourceName` setelah jenjang selesai (provider yang dipakai sudah ada di `_exhausted`), supaya
+   tidak muncul sekejap saat router pindah ke provider berikutnya. Kalau ada beberapa, yang dipakai adalah lirik dari
+   provider dengan prioritas tertinggi. Popup menampilkannya sebagai teks biasa (footer: "sc: … · unsynced"), sedangkan
+   panel tetap kosong karena tidak ada waktu untuk diikuti.
 
 Langkah menambah service:
 1. Buat `ui/providers/NamaProvider.qml`. Kerangka minimalnya ada di komentar atas `TranscriptProvider.qml`,

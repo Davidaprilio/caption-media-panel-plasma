@@ -17,6 +17,10 @@ import "providers"
 // While `probe` is set (the popup is open), the other candidates look for a
 // transcript too, so `available` lists every source that has one; the user
 // can pin one of them. The pin is dropped with the next media.
+//
+// A provider can give up with unsynced lyrics (plainText). They are kept, and
+// when every candidate has given up, the highest-priority ones are offered as
+// `plainText` (the popup shows them; the panel stays empty).
 QtObject {
     id: source
 
@@ -64,12 +68,23 @@ QtObject {
         pinned = provider;
     }
 
+    // Unsynced lyrics, only once nothing synced is left to try (not while
+    // the cascade moves on, or they would flash up between two providers).
+    readonly property bool _settled: status === TranscriptProvider.Unavailable && _exhausted.indexOf(current) !== -1
+    readonly property string plainText: _settled && _plainFound.length > 0 ? _plainFound[0].text : ""
+    readonly property string plainSourceName: _settled && _plainFound.length > 0 ? _plainFound[0].sourceName : ""
+
     // Providers that had nothing for the current media, in the order they gave up.
     property var _exhausted: []
+    // { provider, text, sourceName } of providers that gave up with unsynced
+    // lyrics, in priority order. Recorded when they give up: a provider that
+    // is no longer in use forgets its result.
+    property var _plainFound: []
     readonly property string _mediaKey: media ? media.trackKey + "\u001f" + media.url : ""
 
     on_MediaKeyChanged: {
         _exhausted = [];
+        _plainFound = [];
         pinned = null;
     }
 
@@ -104,8 +119,21 @@ QtObject {
         const provider = current;
         if (provider && provider.status === TranscriptProvider.Unavailable && !provider.fallback
                 && _exhausted.indexOf(provider) === -1) {
+            if (provider.plainText) {
+                _plainFound = _plainFound.concat([{ provider: provider, text: provider.plainText, sourceName: provider.sourceName }])
+                    .sort((a, b) => _priority(a.provider) - _priority(b.provider));
+            }
             _exhausted = _exhausted.concat([provider]);
         }
+    }
+
+    function _priority(provider) {
+        for (let i = 0; i < providers.length; ++i) {
+            if (providers[i] === provider) {
+                return i;
+            }
+        }
+        return providers.length;
     }
 
     // Always deferred: a provider can answer (e.g. from its cache) while

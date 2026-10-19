@@ -5,7 +5,8 @@ import "../../code/lrclib.js" as Lrclib
 // (after NetEase, before YouTube captions in main.qml's list).
 // At most two requests per track: an exact lookup (title, artist, album,
 // duration), then a search when that finds nothing synced. Misses are
-// cached too, so replaying a song without lyrics does not ask again.
+// cached too, so replaying a song without lyrics does not ask again. Without
+// synced lyrics, unsynced ones (if any) are handed over as plainText.
 //
 // /api/get answers 503 for tracks it has to look up elsewhere when LRCLIB is
 // busy, so a 503 there goes straight to the (cheap) search instead of waiting.
@@ -20,6 +21,8 @@ TranscriptProvider {
     readonly property string _key: media ? media.artist + "\u001f" + media.track + "\u001f" + media.album : ""
     // The track to load: none while another provider is in use (unless probing).
     readonly property string _wanted: active || probing ? _key : ""
+    // Unsynced lyrics found during the current load, if any.
+    property string _plain: ""
 
     providerId: "lrclib"
     displayName: "LRCLIB"
@@ -54,13 +57,16 @@ TranscriptProvider {
         }
         const hit = cached(key);
         if (hit) {
-            setReady(hit.cues, hit.label);
+            setFromCache(hit);
             return;
         }
         setLoading();
+        _plain = "";
         const q = Lrclib.query(media.track, media.artist, media.album, media.lengthMs);
         http.get(Lrclib.getUrl(q), (ok, text, httpStatus) => {
             const record = ok ? _parse(text) : null;
+            // /api/get matched the duration already; kept in case search finds nothing synced.
+            _plain = record ? Lrclib.pickPlain([record], 0) : "";
             if (Lrclib.isUsable(record)) {
                 _finish(key, record, q);
             } else if (record || httpStatus === 404 || httpStatus === 503 || httpStatus === 429) {
@@ -83,6 +89,12 @@ TranscriptProvider {
             const record = Lrclib.pickResult(results, q.durationS);
             if (record) {
                 _finish(key, record, q);
+                return;
+            }
+            const plain = _plain || Lrclib.pickPlain(results, q.durationS);
+            if (plain) {
+                remember(key, { cues: [], label: displayName, plain: plain });
+                setPlainOnly(plain, displayName);
                 return;
             }
             remember(key, { cues: [], label: displayName });

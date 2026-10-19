@@ -53,7 +53,7 @@ TranscriptProvider {
         }
         const hit = cached(key);
         if (hit) {
-            setReady(hit.cues, hit.label);
+            setFromCache(hit);
             return;
         }
         setLoading();

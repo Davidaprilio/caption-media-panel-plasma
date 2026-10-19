@@ -66,6 +66,20 @@ TestCase {
         compare(Lrclib.pickResult([], 200), null);
     }
 
+    function test_pickPlain() {
+        const results = [
+            { id: 1, duration: 160, syncedLyrics: "[00:01.00]x" },
+            { id: 2, duration: 230, plainLyrics: "too long" },
+            { id: 3, duration: 214, instrumental: true, plainLyrics: "" },
+            { id: 4, duration: 213, plainLyrics: "  plain\nlyrics \n" },
+        ];
+        compare(Lrclib.pickPlain(results, 214), "plain\nlyrics");
+        compare(Lrclib.pickPlain(results.slice(0, 3), 214), "", "nothing plain within tolerance");
+        compare(Lrclib.pickPlain(results, 0), "too long", "unknown duration: first with plain lyrics");
+        compare(Lrclib.pickPlain([{ duration: 214, instrumental: true, plainLyrics: "x" }], 214), "", "instrumental");
+        compare(Lrclib.pickPlain([], 214), "");
+    }
+
     function test_parseLrc() {
         const lrc = [
             "[ar:Someone]",

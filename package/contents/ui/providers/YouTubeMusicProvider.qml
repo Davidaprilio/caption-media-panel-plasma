@@ -6,7 +6,8 @@ import "../../code/ytmusic.js" as YTMusic
 // players as NetEase and LRCLIB (Spotify, YouTube Music). On YouTube Music the
 // playing video is asked first (2 requests); music videos often have only
 // plain lyrics, so then, and for Spotify, the song is searched (+1 request).
-// Lyrics without timestamps are never used. Misses are cached.
+// Lyrics without timestamps are never synced; when nothing better turns up
+// they are handed over as plain text (popup only). Misses are cached.
 TranscriptProvider {
     id: provider
 
@@ -48,10 +49,11 @@ TranscriptProvider {
         }
         const hit = cached(key);
         if (hit) {
-            setReady(hit.cues, hit.label);
+            setFromCache(hit);
             return;
         }
         setLoading();
+        _plain = null;
         const q = Lrclib.query(media.track, media.artist, media.album, media.lengthMs);
         const videoId = YTMusic.videoIdFromUrl(media.url);
         if (videoId) {
@@ -78,10 +80,13 @@ TranscriptProvider {
                     _failed("browse", httpStatus2);
                     return;
                 }
-                const result = YTMusic.timedCues(_parse(text2));
+                const response = _parse(text2);
+                const result = YTMusic.timedCues(response);
                 if (result) {
                     _finish(key, result);
                 } else {
+                    // Kept in case no synced lyrics turn up (e.g. the video's, then the song's).
+                    _plain = _plain || YTMusic.plainLyrics(response);
                     orElse();
                 }
             });
@@ -110,7 +115,16 @@ TranscriptProvider {
         setReady(result.cues, label);
     }
 
+    // Plain lyrics found during the current load, if any.
+    property var _plain: null
+
     function _miss(key, reason) {
+        if (_plain) {
+            const label = displayName + (_plain.source ? " · " + _plain.source : "");
+            remember(key, { cues: [], label: label, plain: _plain.text });
+            setPlainOnly(_plain.text, label);
+            return;
+        }
         remember(key, { cues: [], label: displayName });
         setUnavailable(reason);
     }

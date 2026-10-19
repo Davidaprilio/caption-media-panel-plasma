@@ -73,6 +73,9 @@ QtObject {
     property int status: TranscriptProvider.Idle
     // Shown to the user, e.g. "YouTube · English (auto-generated)".
     property string sourceName: displayName
+    // Lyrics without timestamps, when that is all the source has (status is
+    // then Unavailable: nothing to sync). The popup shows them as a last resort.
+    property string plainText: ""
 
     // --- Helpers for implementations --------------------------------------
 
@@ -93,9 +96,24 @@ QtObject {
         _set(TranscriptProvider.Unavailable, [], displayName);
     }
 
-    function _set(newStatus, newCues, label) {
+    // No synced transcript, but plain lyrics.
+    function setPlainOnly(text, label) {
+        _set(TranscriptProvider.Unavailable, [], label || displayName, text);
+    }
+
+    // Applies a cache entry { cues, label, plain } written with remember().
+    function setFromCache(entry) {
+        if (entry.cues.length === 0 && entry.plain) {
+            setPlainOnly(entry.plain, entry.label);
+        } else {
+            setReady(entry.cues, entry.label);
+        }
+    }
+
+    function _set(newStatus, newCues, label, plain) {
         cues = newCues;
         sourceName = label;
+        plainText = plain || "";
         status = newStatus;
     }
 

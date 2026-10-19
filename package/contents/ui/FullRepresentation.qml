@@ -23,6 +23,9 @@ PlasmaExtras.Representation {
 
     collapseMarginsHint: true
 
+    // Nothing synced, but unsynced lyrics were found: shown as plain text.
+    readonly property bool plainShown: root.live && root.transcript.cues.length === 0 && root.transcript.plainText !== ""
+
     header: PlasmaExtras.PlasmoidHeading {
         // A single child: the heading only sizes itself from its content when
         // there is exactly one.
@@ -254,6 +257,9 @@ PlasmaExtras.Representation {
                     if (transcript.status === TranscriptProvider.Loading) {
                         return i18nc("sc = lyrics source", "sc: loading…");
                     }
+                    if (full.plainShown) {
+                        return i18nc("sc = lyrics source; unsynced = lyrics without timestamps", "sc: %1 · unsynced", transcript.plainSourceName);
+                    }
                     if (!transcript.current || transcript.status === TranscriptProvider.Unavailable) {
                         return i18nc("sc = lyrics source", "sc: none");
                     }
@@ -283,147 +289,170 @@ PlasmaExtras.Representation {
         }
     }
 
-    contentItem: PlasmaComponents3.ScrollView {
-        id: scrollView
+    contentItem: Item {
+        PlasmaComponents3.ScrollView {
+            anchors.fill: parent
+            visible: !full.plainShown
 
-        ListView {
-            id: transcript
+            ListView {
+                id: transcript
 
-            readonly property bool seekable: root.media.canSeek || root.demo
-            readonly property int animationDuration: Kirigami.Units.longDuration > 0 ? Plasmoid.configuration.animationDuration : 0
-            // Far seeks (and opening the popup) jump instead of sliding past every line.
-            property bool _jumping: true
+                readonly property bool seekable: root.media.canSeek || root.demo
+                readonly property int animationDuration: Kirigami.Units.longDuration > 0 ? Plasmoid.configuration.animationDuration : 0
+                // Far seeks (and opening the popup) jump instead of sliding past every line.
+                property bool _jumping: true
 
-            // Moves the highlight to index and keeps it centred. The view's own
-            // highlight handling is not used, so the slide can be eased.
-            function showIndex(index, jump) {
-                _jumping = jump || animationDuration === 0 || currentIndex < 0 || Math.abs(index - currentIndex) > 3;
-                currentIndex = index;
-                // Nothing to scroll while the popup is closed, or while the user scrolls.
-                if (index < 0 || !root.expanded || moving) {
-                    return;
+                // Moves the highlight to index and keeps it centred. The view's own
+                // highlight handling is not used, so the slide can be eased.
+                function showIndex(index, jump) {
+                    _jumping = jump || animationDuration === 0 || currentIndex < 0 || Math.abs(index - currentIndex) > 3;
+                    currentIndex = index;
+                    // Nothing to scroll while the popup is closed, or while the user scrolls.
+                    if (index < 0 || !root.expanded || moving) {
+                        return;
+                    }
+                    const from = contentY;
+                    positionViewAtIndex(index, ListView.Center);
+                    if (_jumping) {
+                        scrollAnimation.stop();
+                        return;
+                    }
+                    const to = contentY;
+                    contentY = from;
+                    scrollAnimation.to = to;
+                    scrollAnimation.restart();
                 }
-                const from = contentY;
-                positionViewAtIndex(index, ListView.Center);
-                if (_jumping) {
-                    scrollAnimation.stop();
-                    return;
+
+                // Reads the index when it runs, not when it is scheduled.
+                function jumpToCurrent() {
+                    showIndex(root.clock.currentIndex, true);
                 }
-                const to = contentY;
-                contentY = from;
-                scrollAnimation.to = to;
-                scrollAnimation.restart();
-            }
 
-            // Reads the index when it runs, not when it is scheduled.
-            function jumpToCurrent() {
-                showIndex(root.clock.currentIndex, true);
-            }
+                model: root.live ? root.transcript.cues : []
+                clip: true
+                reuseItems: true
+                highlightFollowsCurrentItem: false
+                highlightRangeMode: ListView.NoHighlightRange
 
-            model: root.live ? root.transcript.cues : []
-            clip: true
-            reuseItems: true
-            highlightFollowsCurrentItem: false
-            highlightRangeMode: ListView.NoHighlightRange
+                onCountChanged: Qt.callLater(jumpToCurrent)
+                Component.onCompleted: jumpToCurrent()
 
-            onCountChanged: Qt.callLater(jumpToCurrent)
-            Component.onCompleted: jumpToCurrent()
-
-            Connections {
-                target: root.clock
-                function onCurrentIndexChanged() {
-                    transcript.showIndex(root.clock.currentIndex, false);
-                }
-            }
-            Connections {
-                target: root
-                function onExpandedChanged() {
-                    if (root.expanded) {
-                        transcript.jumpToCurrent();
+                Connections {
+                    target: root.clock
+                    function onCurrentIndexChanged() {
+                        transcript.showIndex(root.clock.currentIndex, false);
                     }
                 }
-            }
-
-            NumberAnimation {
-                id: scrollAnimation
-                target: transcript
-                property: "contentY"
-                duration: transcript.animationDuration * 1.6
-                easing.type: Easing.OutCubic
-            }
-
-            highlight: PlasmaExtras.Highlight {
-                width: transcript.width
-                y: transcript.currentItem ? transcript.currentItem.y : 0
-                height: transcript.currentItem ? transcript.currentItem.height : 0
-                visible: transcript.currentItem !== null
-
-                Behavior on y {
-                    enabled: !transcript._jumping
-                    NumberAnimation {
-                        duration: transcript.animationDuration
-                        easing.type: Easing.OutCubic
+                Connections {
+                    target: root
+                    function onExpandedChanged() {
+                        if (root.expanded) {
+                            transcript.jumpToCurrent();
+                        }
                     }
                 }
-                Behavior on height {
-                    enabled: !transcript._jumping
-                    NumberAnimation {
-                        duration: transcript.animationDuration
-                        easing.type: Easing.OutCubic
+
+                NumberAnimation {
+                    id: scrollAnimation
+                    target: transcript
+                    property: "contentY"
+                    duration: transcript.animationDuration * 1.6
+                    easing.type: Easing.OutCubic
+                }
+
+                highlight: PlasmaExtras.Highlight {
+                    width: transcript.width
+                    y: transcript.currentItem ? transcript.currentItem.y : 0
+                    height: transcript.currentItem ? transcript.currentItem.height : 0
+                    visible: transcript.currentItem !== null
+
+                    Behavior on y {
+                        enabled: !transcript._jumping
+                        NumberAnimation {
+                            duration: transcript.animationDuration
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                    Behavior on height {
+                        enabled: !transcript._jumping
+                        NumberAnimation {
+                            duration: transcript.animationDuration
+                            easing.type: Easing.OutCubic
+                        }
                     }
                 }
-            }
 
-            delegate: PlasmaComponents3.ItemDelegate {
-                id: row
+                delegate: PlasmaComponents3.ItemDelegate {
+                    id: row
 
-                required property int index
-                required property var modelData
+                    required property int index
+                    required property var modelData
 
-                width: ListView.view.width
-                hoverEnabled: transcript.seekable
-                onClicked: root.seekTo(modelData.start)
+                    width: ListView.view.width
+                    hoverEnabled: transcript.seekable
+                    onClicked: root.seekTo(modelData.start)
 
-                contentItem: RowLayout {
-                    spacing: Kirigami.Units.largeSpacing
+                    contentItem: RowLayout {
+                        spacing: Kirigami.Units.largeSpacing
 
-                    PlasmaComponents3.Label {
-                        Layout.alignment: Qt.AlignTop
-                        text: Cues.formatTime(row.modelData.start)
-                        font: Kirigami.Theme.smallFont
-                        opacity: 0.6
-                    }
-                    PlasmaComponents3.Label {
-                        Layout.fillWidth: true
-                        text: row.modelData.text
-                        textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
-                        // Opacity only: switching to bold would reflow the line. Short
-                        // gaps between cues are ignored here so the line does not blink.
-                        opacity: row.index === transcript.currentIndex ? 1 : 0.6
+                        PlasmaComponents3.Label {
+                            Layout.alignment: Qt.AlignTop
+                            text: Cues.formatTime(row.modelData.start)
+                            font: Kirigami.Theme.smallFont
+                            opacity: 0.6
+                        }
+                        PlasmaComponents3.Label {
+                            Layout.fillWidth: true
+                            text: row.modelData.text
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            // Opacity only: switching to bold would reflow the line. Short
+                            // gaps between cues are ignored here so the line does not blink.
+                            opacity: row.index === transcript.currentIndex ? 1 : 0.6
 
-                        Behavior on opacity {
-                            enabled: transcript.animationDuration > 0
-                            OpacityAnimator {
-                                duration: transcript.animationDuration
+                            Behavior on opacity {
+                                enabled: transcript.animationDuration > 0
+                                OpacityAnimator {
+                                    duration: transcript.animationDuration
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            Kirigami.PlaceholderMessage {
-                anchors.centerIn: parent
-                width: parent.width - Kirigami.Units.gridUnit * 4
-                visible: transcript.count === 0
-                icon.name: "media-view-subtitles-symbolic"
-                text: {
-                    if (!root.live) {
-                        return i18n("Nothing is playing");
+                Kirigami.PlaceholderMessage {
+                    anchors.centerIn: parent
+                    width: parent.width - Kirigami.Units.gridUnit * 4
+                    visible: transcript.count === 0
+                    icon.name: "media-view-subtitles-symbolic"
+                    text: {
+                        if (!root.live) {
+                            return i18n("Nothing is playing");
+                        }
+                        return root.transcript.status === TranscriptProvider.Loading ? i18n("Loading transcript…") : i18n("No transcript for this media");
                     }
-                    return root.transcript.status === TranscriptProvider.Loading ? i18n("Loading transcript…") : i18n("No transcript for this media");
+                    explanation: root.live ? "" : i18n("Start a media player to see its transcript here.")
                 }
-                explanation: root.live ? "" : i18n("Start a media player to see its transcript here.")
+            }
+        }
+
+        // Created only when needed.
+        Loader {
+            anchors.fill: parent
+            active: full.plainShown
+            sourceComponent: PlasmaComponents3.ScrollView {
+                id: plainView
+
+                contentWidth: availableWidth
+
+                PlasmaComponents3.Label {
+                    width: plainView.availableWidth
+                    padding: Kirigami.Units.largeSpacing
+                    text: root.transcript.plainText
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    lineHeight: 1.15
+                }
             }
         }
     }

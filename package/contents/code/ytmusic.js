@@ -12,7 +12,7 @@
 //
 // Only the mobile client gets timestamps. Music videos often have only plain
 // lyrics while the song (audio track) entry has synced ones; plain lyrics are
-// never used.
+// only a last resort (plainLyrics()).
 
 const BASE_URL = "https://music.youtube.com/youtubei/v1/";
 const NEXT_URL = BASE_URL + "next?prettyPrint=false";
@@ -106,6 +106,19 @@ function timedCues(browse) {
     });
     const source = String((data && data.sourceMessage) || "").replace(/^Source:\s*/i, "");
     return cues.length > 0 ? { cues: cues, source: source } : null;
+}
+
+// Browse response -> { text, source } for lyrics without (complete)
+// timestamps, or null. Shown as plain lyrics when nothing has synced ones.
+function plainLyrics(browse) {
+    const data = _timedLyrics(browse);
+    const lines = (data && data.timedLyricsData) || [];
+    if (lines.length === 0 || lines.every(line => line.cueRange)) {
+        return null;
+    }
+    const text = lines.map(line => String(line.lyricLine || "").trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    const source = String((data && data.sourceMessage) || "").replace(/^Source:\s*/i, "");
+    return text ? { text: text, source: source } : null;
 }
 
 function _text(column) {

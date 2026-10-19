@@ -93,6 +93,50 @@ TestCase {
         onWorkingChanged: working ? setReady([{ start: 0, end: 1000, text: "third" }], "Third · test") : reset()
     }
 
+    // Gives up with unsynced lyrics (like YouTube Music for a music video).
+    component PlainProvider: TranscriptProvider {
+        property string lyrics: "la\nla"
+        providerId: "plain"
+        displayName: "Plain"
+        canHandle: media !== null && media.url.startsWith("https://multi.test/")
+        readonly property bool working: active || probing
+        onWorkingChanged: working ? Qt.callLater(setPlainOnly, lyrics, displayName + " · test") : reset()
+    }
+
+    Component {
+        id: plainComponent
+        TranscriptSource {
+            media: fakeMedia
+            providers: [
+                PlainProvider {},
+                EmptyProvider {},
+                PlainProvider {
+                    providerId: "laterPlain"
+                    displayName: "Later plain"
+                    lyrics: "lower priority"
+                },
+                Fallback {}
+            ]
+        }
+    }
+
+    Component {
+        id: spyComponent
+        SignalSpy {}
+    }
+
+    Component {
+        id: plainThenSyncedComponent
+        TranscriptSource {
+            media: fakeMedia
+            providers: [
+                PlainProvider {},
+                SecondProvider {},
+                Fallback {}
+            ]
+        }
+    }
+
     Component {
         id: probeComponent
         TranscriptSource {
@@ -259,6 +303,33 @@ TestCase {
         compare(source.current.providerId, "fallback");
     }
 
+    function test_plainLyricsWhenNothingIsSynced() {
+        const source = createTemporaryObject(plainComponent, test);
+        const changes = createTemporaryObject(spyComponent, test, { target: source, signalName: "plainTextChanged" });
+        fakeMedia.url = "https://multi.test/a";
+        compare(source.plainText, "", "not while providers are still looking");
+        tryCompare(source, "status", TranscriptProvider.Unavailable);
+        wait(50);
+        compare(changes.count, 1, "no flash while the cascade moves past the first plain lyrics");
+        compare(source.current.providerId, "laterPlain");
+        compare(source.cues.length, 0);
+        compare(source.plainText, "la\nla", "the first provider's, though it is no longer in use");
+        compare(source.plainSourceName, "Plain · test");
+        compare(provider(source, "plain").plainText, "", "the provider itself forgot it");
+
+        fakeMedia.trackKey = "t2";
+        compare(source.plainText, "", "forgotten with the media");
+        tryCompare(source, "plainText", "la\nla");
+    }
+
+    function test_plainLyricsGiveWayToSynced() {
+        const source = createTemporaryObject(plainThenSyncedComponent, test);
+        fakeMedia.url = "https://multi.test/a";
+        tryCompare(source, "sourceName", "Second");
+        compare(source.status, TranscriptProvider.Ready);
+        compare(source.plainText, "");
+    }
+
     function test_candidatesAndPinning() {
         const source = createTemporaryObject(cascadeComponent, test);
         fakeMedia.url = "https://multi.test/a";
@@ -336,6 +407,23 @@ TestCase {
         p.reset();
         compare(p.cues.length, 0);
         compare(p.sourceName, "Bare");
+
+        p.setPlainOnly("a\nb", "Bare · plain");
+        compare(p.status, TranscriptProvider.Unavailable);
+        compare(p.plainText, "a\nb");
+        compare(p.sourceName, "Bare · plain");
+        compare(p.cues.length, 0);
+        p.setLoading();
+        compare(p.plainText, "", "dropped by the other states");
+        p.setFromCache({ cues: [], label: "Bare · plain", plain: "c" });
+        compare(p.status, TranscriptProvider.Unavailable);
+        compare(p.plainText, "c");
+        p.setFromCache({ cues: [{ start: 0, end: 1, text: "x" }], label: "Bare · en" });
+        compare(p.status, TranscriptProvider.Ready);
+        compare(p.plainText, "");
+        p.setFromCache({ cues: [], label: "Bare" });
+        compare(p.status, TranscriptProvider.Unavailable);
+        compare(p.plainText, "");
 
         p.remember("a", 1);
         p.remember("b", 2);

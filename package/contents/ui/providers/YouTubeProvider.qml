@@ -26,7 +26,7 @@ TranscriptProvider {
         }
         const hit = cached(id);
         if (hit) {
-            setReady(hit.cues, hit.label);
+            setFromCache(hit);
             return;
         }
         setLoading();

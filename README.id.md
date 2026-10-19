@@ -11,7 +11,9 @@ Widget panel KDE Plasma 6 yang menampilkan caption dan lirik tersinkron dari med
 - **Spotify** (aplikasi desktop maupun Spotify Web) dan **YouTube Music**: lirik tersinkron dari NetEase Cloud Music.
   Kalau ada versi **romanisasi**, versi itu yang dipakai (misalnya romaji untuk lagu Jepang); kalau tidak, teks
   aslinya. Kalau NetEase tidak punya liriknya: lirik tersinkron dari YouTube Music (Musixmatch / LyricFind), lalu
-  [LRCLIB](https://lrclib.net), lalu (khusus YouTube Music) caption videonya. Lirik tanpa timestamp tidak pernah dipakai.
+  [LRCLIB](https://lrclib.net), lalu (khusus YouTube Music) caption videonya. Kalau tidak ada satu pun sumber yang
+  tersinkron tetapi ada lirik **tanpa timestamp** (YouTube Music atau LRCLIB), lirik itu tampil sebagai teks biasa di
+  popup, dan panel tetap kosong.
 - **Media lain**: transcript **dummy** yang mengikuti posisi player (bisa dimatikan di pengaturan).
 
 Cara kerjanya dijelaskan di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -30,7 +32,8 @@ Cara kerjanya dijelaskan di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Saat tidak ada media atau tidak ada teks, area widget di panel dibiarkan kosong.
 - **Popup**: artwork, judul dan artis, tombol previous / play-pause / next, serta transcript lengkap dengan baris aktif
   yang di-highlight dan auto-scroll; klik baris untuk seek. Footer menampilkan sumber yang dipakai, dan bisa memilih
-  sumber lain yang **punya lirik** untuk lagu itu (dicek selama popup terbuka).
+  sumber lain yang **punya lirik** untuk lagu itu (dicek selama popup terbuka). Lirik tanpa sinkron ditampilkan sebagai
+  teks biasa yang bisa di-scroll, dengan tanda "unsynced" di footer.
 - **Equalizer** di belakang caption di panel dan di belakang judul popup (masing-masing bisa dimatikan). Kalau
   [cava](https://github.com/karlstav/cava) terpasang (`sudo pacman -S cava`), bar mengikuti suara yang keluar dari
   speaker; tanpa cava, bar bergerak dekoratif. Keduanya memakai satu sumber audio yang sama. Warna (aksen tema atau
