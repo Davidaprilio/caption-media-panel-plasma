@@ -28,6 +28,10 @@ TestCase {
             { tag: "live", title: "Song - Live at Wembley", clean: "Song" },
             { tag: "hyphen in name", title: "Re-Arranged", clean: "Re-Arranged" },
             { tag: "dash keeps title", title: "Part 1 - The Beginning", clean: "Part 1 - The Beginning" },
+            { tag: "official video", title: "Ini Abadi (Official Music Video)", clean: "Ini Abadi" },
+            { tag: "lyrics video", title: "Ini Abadi [Lirik]", clean: "Ini Abadi" },
+            { tag: "audio", title: "Hati-Hati di Jalan (Official Audio)", clean: "Hati-Hati di Jalan" },
+            { tag: "unrelated brackets stay", title: "Song (Part 2)", clean: "Song (Part 2)" },
         ];
     }
 

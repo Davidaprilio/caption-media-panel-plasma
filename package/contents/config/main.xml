@@ -62,6 +62,10 @@
         <entry name="preferRomanized" type="Bool">
             <default>true</default>
         </entry>
+        <!-- synced lyrics from YouTube Music (Musixmatch / LyricFind) -->
+        <entry name="ytmusicLyricsEnabled" type="Bool">
+            <default>true</default>
+        </entry>
         <!-- synced lyrics from LRCLIB for Spotify and YouTube Music -->
         <entry name="lrclibEnabled" type="Bool">
             <default>true</default>

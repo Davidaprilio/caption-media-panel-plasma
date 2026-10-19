@@ -73,6 +73,9 @@ PlasmoidItem {
                 enabled: Plasmoid.configuration.neteaseEnabled
                 preferRomanized: Plasmoid.configuration.preferRomanized
             },
+            YouTubeMusicProvider {
+                enabled: Plasmoid.configuration.ytmusicLyricsEnabled
+            },
             LrclibProvider {
                 enabled: Plasmoid.configuration.lrclibEnabled
             },

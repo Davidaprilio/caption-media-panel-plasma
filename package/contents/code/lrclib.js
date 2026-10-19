@@ -32,10 +32,12 @@ function matchesPlayer(identity, desktopEntry, url, players, urlPrefixes) {
 }
 
 // Drops decorations that lyric databases usually don't have in the title:
-// "(feat. X)", "[with Y]", " - Remastered 2011", " - Live", ...
+// "(feat. X)", "[with Y]", " - Remastered 2011", " - Live", and video ones
+// like "(Official Music Video)", "[Lirik]", "(Audio)".
 function cleanTitle(title) {
     return String(title)
         .replace(/\s*[\(\[](?:feat\.?|ft\.?|with)\s[^\)\]]*[\)\]]/gi, "")
+        .replace(/\s*[\(\[][^\)\]]*\b(?:official|video|audio|lyrics?|lirik|visuali[sz]er|mv|hd|4k)\b[^\)\]]*[\)\]]/gi, "")
         .replace(/\s+-\s+[^-]*(?:remaster|version|edit|mono|stereo|live|mix|demo)[^-]*$/i, "")
         .trim();
 }

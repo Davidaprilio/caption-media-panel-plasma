@@ -34,10 +34,14 @@ Item {
     // plays (the multiplexer's choice first); with nothing playing, keeps the
     // previous one as long as it exists (like Plasma's own media controller).
     function _choosePlayer() {
-        const preferred = mpris.currentPlayer;
+        // A browser's own MPRIS player (title "YouTube Music" for every song,
+        // no artist) is replaced by Plasma Browser Integration's proxy of it:
+        // the proxy's kde:pid is the browser's pid, the native's instancePid.
+        const proxyOf = p => (p && p.kdePid === 0 && _players.find(q => q !== p && q.kdePid > 0 && q.kdePid === p.instancePid)) || p;
+        const preferred = proxyOf(mpris.currentPlayer);
         const isPlaying = p => p && p.playbackStatus === Mpris.PlaybackStatus.Playing;
         const exists = p => p && (p === preferred || _players.indexOf(p) !== -1);
-        let next = player;
+        let next = proxyOf(player);
         if (!isPlaying(player)) {
             if (isPlaying(preferred)) {
                 next = preferred;

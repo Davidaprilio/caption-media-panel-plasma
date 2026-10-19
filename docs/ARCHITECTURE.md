@@ -15,8 +15,9 @@ Target: KDE Plasma 6 (dites di Plasma 6.7.5, Qt 6.11, Wayland, CachyOS).
 ```
  MPRIS (D-Bus) ──► MediaSource.qml ──► CueClock.qml ◄── TranscriptSource.qml (router)
                    playing, rate,      posisi interpolasi,   providers: [ (urutan = prioritas)
-                   position, track,    currentIndex, active    NeteaseProvider  (musik → lirik + romaji)
-                                                               LrclibProvider   (musik → lirik)
+                   position, track,    currentIndex, active    NeteaseProvider       (musik → lirik + romaji)
+                                                               YouTubeMusicProvider  (musik → lirik Musixmatch/LyricFind)
+                                                               LrclibProvider        (musik → lirik)
                                                                YouTubeProvider  (URL YouTube → caption)
                                                                DummyProvider    (fallback) ]
                                                              semua mengimplementasikan TranscriptProvider
@@ -37,6 +38,8 @@ Target: KDE Plasma 6 (dites di Plasma 6.7.5, Qt 6.11, Wayland, CachyOS).
 | `ui/providers/HttpClient.qml` | HTTP async bersama untuk provider: header, timeout, retry untuk 503/429 (mengikuti `Retry-After`), pembatalan, dan pengabaian jawaban basi. |
 | `ui/providers/YouTubeProvider.qml`, `code/youtube.js` | Transkrip asli YouTube (lihat di bawah). |
 | `ui/providers/NeteaseProvider.qml`, `code/netease.js` | Lirik tersinkron + romanisasi dari NetEase Cloud Music (lihat di bawah). |
+| `ui/providers/YouTubeMusicProvider.qml`, `code/ytmusic.js` | Lirik tersinkron dari YouTube Music (lihat di bawah). |
+| `code/match.js` | Aturan pencocokan hasil pencarian (durasi, artis, judul, versi lain), dipakai NetEase dan YouTube Music. |
 | `ui/providers/LrclibProvider.qml`, `code/lrclib.js` | Lirik tersinkron dari LRCLIB untuk Spotify dan YouTube Music (lihat di bawah). |
 | `ui/providers/DummyProvider.qml` | Provider fallback berisi teks dummy. |
 | `code/cues.js` | Binary search, batas cue berikutnya, dan helper. |
@@ -98,7 +101,7 @@ Hasilnya di-cache di memori untuk 8 video terakhir.
 atau kalau URL halamannya diawali `https://open.spotify.com/` (Spotify Web lewat PBI) atau `https://music.youtube.com/`.
 Syarat lainnya: judul dan artis tidak kosong, sehingga iklan Spotify jatuh ke fallback.
 
-Urutan untuk musik (Spotify, YouTube Music) adalah **NetEase → LRCLIB → caption YouTube**; caption YouTube hanya
+Urutan untuk musik (Spotify, YouTube Music) adalah **NetEase → YouTube Music → LRCLIB → caption YouTube**; caption YouTube hanya
 berlaku untuk YouTube Music. Lirik diutamakan karena caption video musik di YouTube sering berupa terjemahan
 (contoh: MV resmi 優里 – ドライフラワー hanya punya caption Inggris, Mandarin, dan Korea). Video YouTube biasa hanya
 diklaim oleh `YouTubeProvider`.
@@ -130,7 +133,9 @@ baris kosong sebagai jeda, dan lagu instrumental (satu cue "♪ Instrumental ♪
 - **Romanisasi:** dengan `preferRomanized` (default aktif), setiap baris memakai teks romanisasi kalau ada untuk
   timestamp itu, dan teks asli kalau tidak ada (misalnya baris berbahasa Inggris di lagu Jepang). Gaya romaji
   NetEase per suku kata ("ta bu n、wa ta shi ja na ku te"). Romanisasi Korea-nya tidak baku.
-- **Pencocokan lagu** (`rankSongs`): durasi harus cocok (±3 detik). Lalu salah satu syarat ini harus terpenuhi:
+- **Pencocokan lagu** (`rankSongs`, aturannya di `code/match.js`): durasi harus cocok (±3 detik). Unggahan yang menaruh
+  nama artis di judul ("Perunggu Ini Abadi" oleh akun pengunggah) cocok dengan kandidat yang judul dan artisnya
+  sama-sama muncul di judul itu. Hiasan video seperti "(Official Music Video)" atau "[Lirik]" dibuang dulu. Lalu salah satu syarat ini harus terpenuhi:
   artis cocok, judul terjemahan (`transNames`) cocok, atau judul cocok dengan aksara non-Latin. Pemutar sering
   menulis artis Asia dalam romaji ("Yuuri" untuk 優里). Lagu berjudul sama dari artis lain ditolak, begitu juga versi
   lain (live, cover, "Chinese Version") kecuali media itu sendiri versi tersebut. Unggahan tanpa artis resmi
@@ -144,13 +149,37 @@ baris kosong sebagai jeda, dan lagu instrumental (satu cue "♪ Instrumental ♪
   request lewat `curl` (tanpa cookie jar), dengan URL yang dikutip aman untuk shell karena judul berasal dari
   player atau halaman web.
 
+## Lirik YouTube Music
+
+YouTube Music menampilkan lirik berlisensi dari Musixmatch dan LyricFind. Lewat API internal (InnerTube, tanpa login)
+lirik itu bisa diambil **tersinkron per baris**:
+
+1. `next` (client web `WEB_REMIX`) dengan videoId menghasilkan `browseId` tab lirik (`pageType` `MUSIC_PAGE_TYPE_TRACK_LYRICS`).
+2. `browse` dengan **client mobile `ANDROID_MUSIC`** menghasilkan `timedLyricsData` (`lyricLine` + `cueRange` dalam ms).
+   Client web hanya mendapat teks biasa.
+3. `search` (filter "Songs") untuk mendapat videoId versi lagu dari judul dan artis.
+
+Alurnya:
+- **YouTube Music:** videoId dari URL dipakai dulu (2 request). Lirik di **video klip** sering tanpa timestamp,
+  sedangkan versi "song"-nya tersinkron. Karena data *counterpart* tidak tersedia tanpa login, versi song dicari lewat
+  `search` (+3 request).
+- **Spotify:** `search`, lalu `next` + `browse` (3 request).
+- Lirik baru dipakai kalau **semua baris** punya `cueRange`. Lirik tanpa timestamp dianggap tidak ada.
+- Tidak ada romanisasi, selalu aksara asli. Karena itu NetEase tetap di urutan pertama.
+
+Uji Oktober 2026: 8 dari 8 lagu (Barat, Indonesia, Jepang, Korea) tersinkron lewat versi song-nya, sama untuk wilayah
+ID dan US. Versi client mobile (`ANDROID_MUSIC` 7.21.50) dan filter Songs ada di `code/ytmusic.js`. Kalau YouTube
+mengubahnya, provider ini gagal dan router beralih ke LRCLIB.
+
 ## Pemilihan player
 
 `Mpris2Model.currentPlayer` (multiplexer kmpris) tidak selalu bisa diandalkan:
 - Kadang tetap menunjuk player bawaan browser yang sudah disaring dan digantikan oleh proxy PBI.
 - Tidak berpindah ke player yang baru mulai memutar kalau nomor baris player aktif kebetulan sama.
 
-Karena itu `MediaSource._choosePlayer()` memilih sendiri:
+Karena itu `MediaSource._choosePlayer()` memilih sendiri. Player bawaan browser selalu diganti dengan proxy PBI-nya
+(`kdePid` proxy = `instancePid` player bawaan). Player bawaan Chrome, misalnya, mengirim judul "YouTube Music"
+untuk setiap lagu tanpa artis, sehingga pergantian lagu pun tidak terdeteksi. Setelah itu:
 1. Player yang sedang diikuti dipertahankan selama masih memutar.
 2. Kalau tidak, dipilih player yang sedang memutar, dengan pilihan multiplexer diutamakan.
 3. Kalau tidak ada yang memutar, player sebelumnya dipertahankan selama masih ada (sticky). Dengan begitu,
