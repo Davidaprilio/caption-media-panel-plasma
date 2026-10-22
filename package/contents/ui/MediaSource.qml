@@ -90,6 +90,13 @@ Item {
     // browser's pid (the native player's instancePid, the proxy's kdePid).
     readonly property string url: _browser.url
     property bool urlPending: false
+    // The followed player is a browser's own MPRIS player with no integration
+    // proxy for it (_choosePlayer() would have switched to one): Plasma Browser
+    // Integration or its browser extension is missing, so the page and often
+    // the song are unknown ("A site is playing media" in Edge).
+    readonly property bool needsBrowserIntegration: hasPlayer && !urlPending && _browser.url === ""
+        && player.kdePid === 0 && _browserPattern.test(player.desktopEntry + " " + player.identity)
+    readonly property var _browserPattern: /chrom|edge|brave|vivaldi|opera|firefox|librewolf|waterfox|floorp|zen/i
     // Metadata of the integration's player when it is the media we follow,
     // otherwise empty strings.
     property var _browser: _noBrowserMedia

@@ -12,7 +12,7 @@ PlasmoidItem {
     readonly property alias media: media
     readonly property alias transcript: transcript
     readonly property alias clock: clock
-    readonly property alias audioLevels: audioLevels
+    readonly property QtObject audioLevels: audioLevelsLoader.item ?? noAudioLevels
 
     // Demo mode plays the dummy transcript on a local clock when no player exists.
     readonly property bool demo: !media.hasPlayer && Plasmoid.configuration.demoWhenIdle
@@ -91,12 +91,27 @@ PlasmoidItem {
         ]
     }
 
-    AudioLevels {
-        id: audioLevels
+    // Loaded rather than declared: AudioLevels needs the QtWebSockets QML
+    // module, which some distributions package separately (Debian/Ubuntu:
+    // qml6-module-qtwebsockets). Without it the bars move decoratively
+    // instead of the whole widget failing to load.
+    Loader {
+        id: audioLevelsLoader
+        active: Plasmoid.configuration.equalizerFollowsAudio
+        source: "AudioLevels.qml"
+    }
+    Binding {
+        target: audioLevelsLoader.item
+        when: audioLevelsLoader.status === Loader.Ready
+        property: "active"
         // The panel's equalizer only needs audio while something plays; the
         // popup's while it is open.
-        active: Plasmoid.configuration.equalizerFollowsAudio && root.animationsEnabled
-            && ((root.panelEqualizerShown && clock.playing) || root.popupEqualizerShown)
+        value: root.animationsEnabled && ((root.panelEqualizerShown && clock.playing) || root.popupEqualizerShown)
+    }
+    QtObject {
+        id: noAudioLevels
+        readonly property var levels: null
+        readonly property bool available: false
     }
 
     CueClock {

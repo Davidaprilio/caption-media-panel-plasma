@@ -7,14 +7,15 @@ Widget panel KDE Plasma 6 yang menampilkan caption dan lirik tersinkron dari med
 
 **Sumber teksnya:**
 - **YouTube** di browser: caption bawaan video, baik manual maupun auto-generated.
-  Butuh [Plasma Browser Integration](https://community.kde.org/Plasma/Browser_Integration) beserta ekstensi browser-nya.
+  Butuh Plasma Browser Integration beserta ekstensi browser-nya (lihat [Media di browser](#media-di-browser)).
 - **Spotify** (aplikasi desktop maupun Spotify Web) dan **YouTube Music**: lirik tersinkron dari NetEase Cloud Music.
   Kalau ada versi **romanisasi**, versi itu yang dipakai (misalnya romaji untuk lagu Jepang); kalau tidak, teks
   aslinya. Kalau NetEase tidak punya liriknya: lirik tersinkron dari YouTube Music (Musixmatch / LyricFind), lalu
   [LRCLIB](https://lrclib.net), lalu (khusus YouTube Music) caption videonya. Kalau tidak ada satu pun sumber yang
   tersinkron tetapi ada lirik **tanpa timestamp** (YouTube Music atau LRCLIB), lirik itu tampil sebagai teks biasa di
   popup, dan panel tetap kosong.
-- **Media lain**: transcript **dummy** yang mengikuti posisi player (bisa dimatikan di pengaturan).
+- **Media lain**: secara default tidak ada teks. Untuk pengujian, transcript **dummy** yang mengikuti posisi player bisa
+  dinyalakan di pengaturan (Testing).
 
 Cara kerjanya dijelaskan di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -36,7 +37,7 @@ Cara kerjanya dijelaskan di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
   teks biasa yang bisa di-scroll, dengan tanda "unsynced" di footer. Kalau daftar digulir sendiri, auto-scroll berhenti
   dan muncul tombol **Follow lyrics** untuk kembali ke baris yang sedang diputar (scroll halus) dan mengikutinya lagi.
 - **Equalizer** di belakang caption di panel dan di belakang judul popup (masing-masing bisa dimatikan). Kalau
-  [cava](https://github.com/karlstav/cava) terpasang (`sudo pacman -S cava`), bar mengikuti suara yang keluar dari
+  [cava](https://github.com/karlstav/cava) dan modul QML Qt WebSockets terpasang (lihat [Kebutuhan](#kebutuhan)), bar mengikuti suara yang keluar dari
   speaker; tanpa cava, bar bergerak dekoratif. Keduanya memakai satu sumber audio yang sama. Warna (aksen tema atau
   warna pilihan) dan opacity (panel dan popup terpisah) bisa diatur.
 - **Mode ambient** di popup: artwork di-blur dan memancar dari belakang thumbnail ke seluruh header (bisa dimatikan).
@@ -45,12 +46,44 @@ Cara kerjanya dijelaskan di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Kebutuhan
 
-- KDE Plasma 6 (dikembangkan di Plasma 6.7 / Qt 6.11, Wayland).
+- KDE Plasma 6 (dikembangkan di Plasma 6.7 / Qt 6.11, Wayland; juga berjalan di Plasma 6.6 dengan X11).
 - `curl` (request ke NetEase) dan `busctl` (systemd; membaca URL media di browser).
-- Untuk media di browser: Plasma Browser Integration beserta ekstensi browser-nya.
-- Opsional, untuk equalizer yang mengikuti audio: `cava` dan `python3` (cukup library standar).
+- Untuk media di browser: Plasma Browser Integration beserta ekstensi browser-nya, lihat [Media di browser](#media-di-browser).
+- Opsional, untuk equalizer yang mengikuti audio: `cava`, `python3` (cukup library standar), dan modul QML Qt
+  WebSockets. Tanpa itu bar bergerak dekoratif, dan halaman pengaturan menyebutkan apa yang belum terpasang.
+
+| Distribusi | Equalizer live (opsional) |
+|---|---|
+| Debian, Ubuntu, Kubuntu | `sudo apt install cava qml6-module-qtwebsockets` |
+| Arch, CachyOS, Manjaro | `sudo pacman -S cava qt6-websockets` |
+| Fedora | `sudo dnf install cava qt6-qtwebsockets` |
 
 Widget-nya sendiri murni QML: tanpa proses build dan tanpa plugin native yang berjalan di dalam plasmashell.
+
+## Media di browser
+
+Player media bawaan browser hampir tidak memberi tahu Plasma apa pun selain "a site is playing media". Lirik dan caption
+butuh informasi halaman dan lagunya, dan itu hanya diberikan oleh
+[Plasma Browser Integration](https://community.kde.org/Plasma/Browser_Integration). Tanpa itu, popup menampilkan
+"Can't tell what … is playing".
+
+1. Pasang paket sistem `plasma-browser-integration` (namanya sama di Debian/Ubuntu, Arch, dan Fedora).
+2. Pasang ekstensi **Plasma Integration**:
+   [Chrome Web Store](https://chromewebstore.google.com/detail/plasma-integration/cimiefiiaegbelhefglklhhakcgmhkai)
+   (Chrome, Chromium, Brave, Vivaldi, …),
+   [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/plasma-integration/dnnckbejblnejeabhcmhklcaljjpdjeh),
+   atau [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/plasma-integration/).
+3. Paket itu hanya mendaftarkan native messaging host untuk sebagian browser (tergantung distribusinya; di Ubuntu
+   misalnya hanya untuk Chrome). Kalau ekstensinya tidak bisa terhubung ke Plasma di browser berbasis Chromium lain,
+   tautkan host-nya ke folder browser tersebut, lalu restart browser:
+
+   ```fish
+   # Microsoft Edge; untuk Brave pakai ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts,
+   # Vivaldi ~/.config/vivaldi/NativeMessagingHosts, Chromium ~/.config/chromium/NativeMessagingHosts
+   mkdir -p ~/.config/microsoft-edge/NativeMessagingHosts
+   ln -s /etc/opt/chrome/native-messaging-hosts/org.kde.plasma.browser_integration.json \
+       ~/.config/microsoft-edge/NativeMessagingHosts/
+   ```
 
 ## Instalasi dan pengembangan
 

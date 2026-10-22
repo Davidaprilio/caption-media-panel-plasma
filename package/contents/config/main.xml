@@ -92,9 +92,9 @@
         <entry name="lrclibEnabled" type="Bool">
             <default>true</default>
         </entry>
-        <!-- dummy transcript for media without a real transcript source -->
+        <!-- dummy transcript for media without a real transcript source (testing) -->
         <entry name="dummyForOtherMedia" type="Bool">
-            <default>true</default>
+            <default>false</default>
         </entry>
     </group>
 </kcfg>

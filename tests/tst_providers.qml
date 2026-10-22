@@ -17,6 +17,7 @@ TestCase {
         property real lengthMs: 0
         property string url: ""
         property bool urlPending: false
+        property bool needsBrowserIntegration: false
     }
 
     // Specialised provider that wants media with an artist.
@@ -138,6 +139,14 @@ TestCase {
     }
 
     Component {
+        id: realDummyComponent
+        TranscriptSource {
+            media: fakeMedia
+            providers: [DummyProvider {}]
+        }
+    }
+
+    Component {
         id: probeComponent
         TranscriptSource {
             media: fakeMedia
@@ -192,6 +201,7 @@ TestCase {
         fakeMedia.artist = "";
         fakeMedia.url = "";
         fakeMedia.urlPending = false;
+        fakeMedia.needsBrowserIntegration = false;
     }
 
     function provider(source, id) {
@@ -328,6 +338,20 @@ TestCase {
         tryCompare(source, "sourceName", "Second");
         compare(source.status, TranscriptProvider.Ready);
         compare(source.plainText, "");
+    }
+
+    function test_dummyLeavesUnidentifiedBrowserMediaAlone() {
+        const source = createTemporaryObject(realDummyComponent, test);
+        compare(source.current.providerId, "dummy");
+        verify(source.cues.length > 0);
+        // A browser's own player without Plasma Browser Integration: the popup
+        // explains how to fix it instead of showing made-up lines.
+        fakeMedia.needsBrowserIntegration = true;
+        compare(source.current, null);
+        compare(source.cues.length, 0);
+        compare(source.status, TranscriptProvider.Idle);
+        fakeMedia.needsBrowserIntegration = false;
+        compare(source.current.providerId, "dummy");
     }
 
     function test_candidatesAndPinning() {

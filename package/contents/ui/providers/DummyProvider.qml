@@ -13,7 +13,9 @@ TranscriptProvider {
     providerId: "dummy"
     displayName: "Dummy"
     fallback: true
-    canHandle: true
+    // Not for browser media the widget cannot identify: the popup explains
+    // how to fix that instead of showing made-up lines.
+    canHandle: !media || !media.needsBrowserIntegration
 
     // Rebuilt only when the number of passes changes, not on every length update.
     on_PassesChanged: setReady(Dummy.build(_passes))

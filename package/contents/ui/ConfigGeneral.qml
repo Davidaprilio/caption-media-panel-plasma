@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.kcmutils as KCM
 import org.kde.kquickcontrols as KQuickControls
+import org.kde.plasma.plasma5support as P5Support
 
 KCM.SimpleKCM {
     id: page
@@ -156,6 +157,47 @@ KCM.SimpleKCM {
             id: equalizerFollowsAudio
             enabled: panelEqualizer.checked || popupEqualizer.checked
             text: i18n("Follow the audio output (runs cava while an equalizer is visible)")
+        }
+        // What the live equalizer still needs on this system.
+        QQC2.Label {
+            // Compiling AudioLevels (without creating it) shows whether the
+            // QtWebSockets module is installed.
+            readonly property bool hasWebSockets: Qt.createComponent("AudioLevels.qml").status !== Component.Error
+            readonly property var missing: {
+                const parts = [];
+                if (!hasWebSockets) {
+                    parts.push(i18n("the Qt WebSockets QML module (Debian/Ubuntu: qml6-module-qtwebsockets, Arch: qt6-websockets, Fedora: qt6-qtwebsockets)"));
+                }
+                if (toolsProbe.checked && !toolsProbe.hasCava) {
+                    parts.push("cava");
+                }
+                if (toolsProbe.checked && !toolsProbe.hasPython) {
+                    parts.push("python3");
+                }
+                return parts;
+            }
+            Layout.maximumWidth: Kirigami.Units.gridUnit * 24
+            visible: equalizerFollowsAudio.enabled && equalizerFollowsAudio.checked && missing.length > 0
+            wrapMode: Text.Wrap
+            font: Kirigami.Theme.smallFont
+            color: Kirigami.Theme.neutralTextColor
+            text: i18n("Not available yet, install %1. Until then the bars move decoratively.", missing.join(", "))
+
+            P5Support.DataSource {
+                id: toolsProbe
+                property bool checked: false
+                property bool hasCava: false
+                property bool hasPython: false
+                engine: "executable"
+                connectedSources: ["command -v cava >/dev/null && echo cava; test -x /usr/bin/python3 && echo python3"]
+                onNewData: (sourceName, data) => {
+                    const found = String(data.stdout || "").split("\n");
+                    hasCava = found.indexOf("cava") !== -1;
+                    hasPython = found.indexOf("python3") !== -1;
+                    checked = true;
+                    disconnectSource(sourceName);
+                }
+            }
         }
         RowLayout {
             Kirigami.FormData.label: i18n("Equalizer color:")

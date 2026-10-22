@@ -502,17 +502,39 @@ PlasmaExtras.Representation {
                 }
 
                 Kirigami.PlaceholderMessage {
+                    id: placeholder
+
+                    // Browser media without Plasma Browser Integration: say how to fix it.
+                    readonly property bool browserHint: root.live && root.media.needsBrowserIntegration
+                        && root.transcript.status !== TranscriptProvider.Loading
+
                     anchors.centerIn: parent
                     width: parent.width - Kirigami.Units.gridUnit * 4
                     visible: transcript.count === 0
-                    icon.name: "media-view-subtitles-symbolic"
+                    icon.name: browserHint ? "plasma-browser-integration" : "media-view-subtitles-symbolic"
                     text: {
                         if (!root.live) {
                             return i18n("Nothing is playing");
                         }
+                        if (browserHint) {
+                            return i18n("Can't tell what %1 is playing", root.media.identity);
+                        }
                         return root.transcript.status === TranscriptProvider.Loading ? i18n("Loading transcript…") : i18n("No transcript for this media");
                     }
-                    explanation: root.live ? "" : i18n("Start a media player to see its transcript here.")
+                    explanation: {
+                        if (!root.live) {
+                            return i18n("Start a media player to see its transcript here.");
+                        }
+                        return browserHint ? i18n("Lyrics and captions for browser media need Plasma Browser Integration: the system package and its browser extension.") : "";
+                    }
+                    helpfulAction: browserHint ? setupHelp : null
+
+                    Kirigami.Action {
+                        id: setupHelp
+                        icon.name: "help-contents"
+                        text: i18n("How to set it up")
+                        onTriggered: Qt.openUrlExternally("https://github.com/Davidaprilio/caption-media-panel-plasma#browser-media")
+                    }
                 }
             }
         }

@@ -188,6 +188,13 @@ untuk setiap lagu tanpa artis, sehingga pergantian lagu pun tidak terdeteksi. Se
 3. Kalau tidak ada yang memutar, player sebelumnya dipertahankan selama masih ada (sticky). Dengan begitu,
    mem-pause Spotify tidak memindahkan widget ke tab browser.
 
+**Browser tanpa Plasma Browser Integration.** Kalau yang diikuti tetap player bawaan sebuah browser (`kdePid` 0, nama
+atau desktop entry seperti chrome/edge/brave/firefox) dan pencarian metadata PBI selesai tanpa hasil, berarti PBI atau
+ekstensinya tidak aktif untuk browser itu (kalau aktif, `_choosePlayer()` pasti sudah pindah ke proxy-nya). Contohnya
+Edge di Kubuntu, yang hanya melaporkan "A site is playing media" tanpa artis. `MediaSource.needsBrowserIntegration`
+menandai kondisi ini. Transcript dummy tidak mengisi tempatnya, dan popup menampilkan "Can't tell what … is playing"
+beserta tombol menuju panduan setup di README (`#browser-media`).
+
 ## Equalizer mengikuti audio
 
 ```
@@ -196,6 +203,12 @@ cava (PipeWire, 20 bar, 30 fps, ASCII) ─stdout─► cava_bridge.py ─WebSock
                                                                                                  └─► EqualizerBars di popup
 ```
 
+- `AudioLevels` dimuat lewat `Loader` di `main.qml`, tidak dideklarasikan langsung, karena butuh modul QML
+  `QtWebSockets` yang di beberapa distribusi dipaket terpisah (Debian/Ubuntu: `qml6-module-qtwebsockets`, tidak ikut
+  terpasang bersama Plasma). Dulu modul yang hilang membuat seluruh applet gagal dimuat. Sekarang equalizer kembali
+  dekoratif (`root.audioLevels` jatuh ke objek dengan `levels: null`). Halaman pengaturan menyebutkan apa yang belum
+  terpasang: modulnya dicek dengan mengompilasi `AudioLevels.qml` tanpa membuat objeknya, cava dan python3 dengan
+  `command -v`.
 - Hanya ada **satu** `AudioLevels` (di `main.qml`, `root.audioLevels`), jadi cava dan FFT berjalan sekali walaupun
   kedua equalizer tampil. Sumber ini aktif kalau equalizer panel tampil dan media sedang diputar, atau popup terbuka
   dengan equalizer aktif.

@@ -7,13 +7,14 @@ A KDE Plasma 6 panel widget that shows synced captions and lyrics for whatever i
 
 **Where the text comes from:**
 - **YouTube** in a browser: the video's own captions (manual or auto-generated).
-  Needs [Plasma Browser Integration](https://community.kde.org/Plasma/Browser_Integration) and its browser extension.
+  Needs Plasma Browser Integration and its browser extension (see [Browser media](#browser-media)).
 - **Spotify** (desktop app or Spotify Web) and **YouTube Music**: synced lyrics from NetEase Cloud Music, using the
   **romanized** version when there is one (e.g. romaji for Japanese songs) and the original text otherwise. Without
   NetEase lyrics: synced lyrics from YouTube Music (Musixmatch / LyricFind), then [LRCLIB](https://lrclib.net), then
   (YouTube Music only) the video's captions. When no source has synced lyrics but one has **unsynced** lyrics
   (YouTube Music or LRCLIB), they are shown as plain text in the popup; the panel stays empty.
-- **Other media**: a **dummy** transcript that follows the player's position (can be turned off in the settings).
+- **Other media**: nothing by default. For testing, a **dummy** transcript that follows the player's position can be
+  turned on in the settings (Testing).
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Indonesian) for how it works.
 
@@ -34,7 +35,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Indonesian) for how it works.
   as scrollable plain text, marked "unsynced" in the footer. Scrolling the list yourself pauses auto-scroll; a
   **Follow lyrics** button glides back to the current line and follows it again.
 - **Equalizer** behind the panel caption and behind the popup title (each can be turned off). With
-  [cava](https://github.com/karlstav/cava) installed (`sudo pacman -S cava`) the bars follow the sound coming out of
+  [cava](https://github.com/karlstav/cava) and the Qt WebSockets QML module installed (see [Requirements](#requirements)) the bars follow the sound coming out of
   the speakers; without it they move decoratively. Both share one audio source. Color (theme accent or your own) and
   opacity (panel and popup separately) are configurable.
 - **Ambient mode** in the popup: the artwork, blurred, glows out from behind the thumbnail across the header
@@ -44,12 +45,43 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Indonesian) for how it works.
 
 ## Requirements
 
-- KDE Plasma 6 (developed on Plasma 6.7 / Qt 6.11, Wayland).
+- KDE Plasma 6 (developed on Plasma 6.7 / Qt 6.11, Wayland; also runs on Plasma 6.6 with X11).
 - `curl` (NetEase requests) and `busctl` (systemd; reads browser media URLs).
-- For browser media: Plasma Browser Integration and its browser extension.
-- Optional, for an equalizer that follows the audio: `cava` and `python3` (only the standard library).
+- For browser media: Plasma Browser Integration and its browser extension, see [Browser media](#browser-media).
+- Optional, for an equalizer that follows the audio: `cava`, `python3` (only the standard library) and the Qt WebSockets
+  QML module. Without them the bars move decoratively, and the settings page says what is missing.
+
+| Distribution | Live equalizer (optional) |
+|---|---|
+| Debian, Ubuntu, Kubuntu | `sudo apt install cava qml6-module-qtwebsockets` |
+| Arch, CachyOS, Manjaro | `sudo pacman -S cava qt6-websockets` |
+| Fedora | `sudo dnf install cava qt6-qtwebsockets` |
 
 The widget itself is pure QML: no build step and no native plugin running inside plasmashell.
+
+## Browser media
+
+The browser's own media player tells Plasma little more than "a site is playing media". Lyrics and captions need to
+know the page and the song, which only [Plasma Browser Integration](https://community.kde.org/Plasma/Browser_Integration)
+provides. Without it the popup says "Can't tell what … is playing".
+
+1. Install the system package `plasma-browser-integration` (same name on Debian/Ubuntu, Arch and Fedora).
+2. Install the **Plasma Integration** extension:
+   [Chrome Web Store](https://chromewebstore.google.com/detail/plasma-integration/cimiefiiaegbelhefglklhhakcgmhkai)
+   (Chrome, Chromium, Brave, Vivaldi, …),
+   [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/plasma-integration/dnnckbejblnejeabhcmhklcaljjpdjeh),
+   or [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/plasma-integration/).
+3. The package registers its native messaging host only for some browsers (which ones depends on the distribution:
+   Ubuntu only for Chrome, for example). If the extension cannot reach Plasma in another Chromium-based browser, link
+   the host into that browser's folder and restart the browser:
+
+   ```fish
+   # Microsoft Edge; for Brave use ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts,
+   # for Vivaldi ~/.config/vivaldi/NativeMessagingHosts, for Chromium ~/.config/chromium/NativeMessagingHosts
+   mkdir -p ~/.config/microsoft-edge/NativeMessagingHosts
+   ln -s /etc/opt/chrome/native-messaging-hosts/org.kde.plasma.browser_integration.json \
+       ~/.config/microsoft-edge/NativeMessagingHosts/
+   ```
 
 ## Install and develop
 
