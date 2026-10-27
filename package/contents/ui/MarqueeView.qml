@@ -7,8 +7,8 @@ import org.kde.kirigami as Kirigami
 // tone, so a singer sees what comes next. The waiting line gets a fixed slot
 // (nextMaxWidth); longer text fades out at the end of it. When the next cue
 // starts, the strip slides left until that line takes the active place, its
-// faded tail is revealed on the way, and the line after it rides in from the
-// right into the slot. Alignment applies to the active line
+// faded tail is revealed on the way, the old line fades out as it leaves, and
+// the line after it rides in from the right into the slot. Alignment applies to the active line
 // plus the slot, so the active line's position does not depend on the length
 // of the next one. An active line wider than the view scrolls within its cue
 // first. Three labels at most (the third only during a slide), and nothing
@@ -143,8 +143,12 @@ Item {
             font: marquee.textFont
             maximumLineCount: 1
             textFormat: Text.PlainText
-            opacity: marquee._sliding ? marquee.mutedOpacity : (marquee.active ? 1 : 0.6)
+            // The outgoing line fades out while it slides away, so dropping it
+            // at the swap is invisible even where the alignment leaves its
+            // tail in view.
+            opacity: marquee._sliding ? 0 : (marquee.active ? 1 : 0.6)
 
+            // Shorter than the slide, so the line is gone before the swap.
             Behavior on opacity {
                 enabled: !marquee._swapping && marquee.animationDuration > 0
                 OpacityAnimator {
